@@ -61,7 +61,7 @@ async function bootstrap() {
     allowedHeaders: ["Authorization", "Content-Type"],
   });
 
-  const port = process.env.BACKEND_PORT || 8001;
+  const port = process.env.PORT || 8001;
   await app.listen(port, "0.0.0.0");
   Logger.log(`Application is running on: ${await app.getUrl()}`);
 }
