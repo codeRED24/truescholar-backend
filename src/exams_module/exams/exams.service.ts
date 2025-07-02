@@ -431,7 +431,7 @@ export class ExamsService {
     page: number,
     limit: number,
     // exam_category?: string,
-    // exam_level?: string,
+    exam_level?: string,
     exam_streams?: string
   ) {
     try {
@@ -445,10 +445,10 @@ export class ExamsService {
       //   filters.push(`e.exam_category = $${queryParams.length + 1}`);
       //   queryParams.push(exam_category);
       // }
-      // if (exam_level) {
-      //   filters.push(`e.exam_level = $${queryParams.length + 1}`);
-      //   queryParams.push(exam_level);
-      // }
+      if (exam_level) {
+        filters.push(`e.level_of_exam = $${queryParams.length + 1}`);
+        queryParams.push(exam_level);
+      }
       if (exam_streams) {
         filters.push(`s.stream_name = $${queryParams.length + 1}`);
         queryParams.push(exam_streams);
@@ -470,6 +470,7 @@ export class ExamsService {
               e.mode_of_exam,
               e.kapp_score,
               e.is_active,
+              e.level_of_exam,
               e.conducting_authority,
               e.exam_fee_min,
               e.exam_fee_max,
@@ -502,10 +503,10 @@ export class ExamsService {
       //   totalFilters.push(`e.exam_category = $${totalCountParams.length + 1}`);
       //   totalCountParams.push(exam_category);
       // }
-      // if (exam_level) {
-      //   totalFilters.push(`e.exam_level = $${totalCountParams.length + 1}`);
-      //   totalCountParams.push(exam_level);
-      // }
+      if (exam_level) {
+        totalFilters.push(`e.level_of_exam = $${totalCountParams.length + 1}`);
+        totalCountParams.push(exam_level);
+      }
       if (exam_streams) {
         totalFilters.push(`s.stream_name = $${totalCountParams.length + 1}`);
         totalCountParams.push(exam_streams);
@@ -605,17 +606,17 @@ export class ExamsService {
   }
 
   async findAllExamsFilters(
-    // exam_level?: string,
+    exam_level?: string,
     exam_streams?: string
   ): Promise<ExamFiltersResponseDto> {
     try {
       const filters: string[] = [];
       const queryParams: any[] = [];
 
-      // if (exam_level) {
-      //   filters.push(`e.exam_level = $${queryParams.length + 1}`);
-      //   queryParams.push(exam_level);
-      // }
+      if (exam_level) {
+        filters.push(`e.level_of_exam = $${queryParams.length + 1}`);
+        queryParams.push(exam_level);
+      }
       if (exam_streams) {
         filters.push(`s.stream_name = $${queryParams.length + 1}`);
         queryParams.push(exam_streams);
@@ -628,7 +629,8 @@ export class ExamsService {
           e.exam_id,
           s.stream_name,
           e.stream_id,
-          ec.silos
+          ec.silos,
+          e.level_of_exam
           FROM exam e
           LEFT JOIN stream s ON e.stream_id = s.stream_id
           LEFT JOIN exam_content ec ON e.exam_id = ec.exam_id
@@ -659,7 +661,7 @@ export class ExamsService {
 
   private buildFilterSection(exams): {
     // exam_category: { value: string; count: number }[];
-    // exam_level: { value: string; count: number }[];
+    level_of_exam: { value: string; count: number }[];
     exam_streams: { value: string; count: number }[];
   } {
     const examCategoryMap: { [key: string]: number } = {};
@@ -672,10 +674,10 @@ export class ExamsService {
       //   examCategoryMap[exam.exam_category] =
       //     (examCategoryMap[exam.exam_category] || 0) + 1;
       // }
-      // if (exam.exam_level) {
-      //   levelOfExamMap[exam.exam_level] =
-      //     (levelOfExamMap[exam.exam_level] || 0) + 1;
-      // }
+      if (exam.level_of_exam) {
+        levelOfExamMap[exam.level_of_exam] =
+          (levelOfExamMap[exam.level_of_exam] || 0) + 1;
+      }
       if (exam.stream_name) {
         // Adjusted to use stream relation
         streamNameMap[exam.stream_name] =
@@ -691,12 +693,12 @@ export class ExamsService {
     //   }))
     //   .sort((a, b) => b.count - a.count);
 
-    // const exam_level = Object.keys(levelOfExamMap)
-    //   .map((value) => ({
-    //     value,
-    //     count: levelOfExamMap[value],
-    //   }))
-    //   .sort((a, b) => b.count - a.count);
+    const level_of_exam = Object.keys(levelOfExamMap)
+      .map((value) => ({
+        value,
+        count: levelOfExamMap[value],
+      }))
+      .sort((a, b) => b.count - a.count);
 
     const exam_streams = Object.keys(streamNameMap)
       .map((value) => ({
@@ -709,7 +711,7 @@ export class ExamsService {
     return {
       // exam_category,
       exam_streams,
-      // exam_level,
+      level_of_exam,
     };
   }
 

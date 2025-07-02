@@ -14,7 +14,7 @@ import {
 import { ExamsService } from "./exams.service";
 import { CreateExamDto } from "./dto/create-exams.dto";
 import { UpdateExamDto } from "./dto/update-exams.dto";
-import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from "@nestjs/swagger";
 import { Exam } from "./exams.entity";
 import { JwtAuthGuard } from "../../authentication_module/auth/jwt-auth.guard";
 import { ExamInfoDto } from "./dto/exam-info.dto";
@@ -104,14 +104,14 @@ export class ExamsController {
     @Query("page") page: number = 1,
     @Query("pageSize") limit: number = 15,
     // @Query("exam_category") examCategory?: string,
-    // @Query("exam_level") examLevel?: string,
+    @Query("exam_level") examLevel?: string,
     @Query("exam_streams") examStreams?: string
   ): Promise<any> {
     return this.examsService.findAllExamsListing(
       page,
       limit,
       // examCategory,
-      // examLevel,
+      examLevel,
       examStreams
     );
   }
@@ -132,6 +132,7 @@ export class ExamsController {
 
   @Get("/exam-filters")
   @ApiOperation({ summary: "Get all exams with listing fields and filters" })
+  @ApiQuery({ name: "exam_level", required: false })
   async getExamFilters(
     // @Query("exam_level") examLevel?: string,
     @Query("exam_streams") examStreams?: string
