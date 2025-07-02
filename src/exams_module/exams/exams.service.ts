@@ -837,6 +837,4 @@ export class ExamsService {
     // Return the exams list and filter_section
     return { exams: examListingDtos, filter_section: filterSection };
   }
-
-  // Helper function to build the filter_section
 }
