@@ -1,0 +1,14 @@
+{
+  "type": "postgres",
+  "host": "13.233.20.76",
+  "port": 5432,
+  "username": "postgres",
+  "password": "qwertyuiop@32",
+  "database": "kollegeApply",
+  "entities": ["dist/**/*.entity.js"],
+  "migrations": ["dist/migrations/*.js"],
+  "cli": {
+    "migrationsDir": "src/migrations"
+  },
+  "synchronize": false
+}

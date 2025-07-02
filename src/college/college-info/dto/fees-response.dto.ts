@@ -1,0 +1,72 @@
+import { CollegeContentDto } from "../../../college/college-content/dto/create-college-content.dto";
+import { ExamSectionDto } from "./infrastructure-response.dto";
+export class FeesDto {
+  college_information: {
+    college_id?: number;
+    created_at?: Date;
+    updated_at?: Date;
+    is_active?: boolean | true;
+    college_name?: string;
+    short_name?: string;
+    search_names?: string;
+    parent_college_id?: number;
+    city_id?: number;
+    state_id?: number;
+    country_id?: number;
+    location?: string;
+    PIN_code?: string;
+    latitude_longitude?: string;
+    college_email?: string;
+    college_phone?: string;
+    college_website?: string;
+    type_of_institute?: string;
+    affiliated_university_id?: number;
+    founded_year?: string;
+    logo_img?: string;
+    banner_img?: string;
+    total_student?: number;
+    campus_size?: number;
+    UGC_approved?: boolean;
+    kapp_rating?: number;
+    kapp_score?: number;
+    city?: string | null;
+    state?: string | null;
+    country?: string | null;
+    nacc_grade?: string;
+    slug?: string;
+    girls_only?: boolean;
+    is_university?: boolean;
+    primary_stream?: number;
+    course_count?: number;
+    meta_desc?: string;
+    is_online?: boolean;
+    college_brochure?: string;
+
+  };
+  news_section?: CollegeContentDto[];
+  info_section?: CollegeContentDto[];
+  exam_section?: ExamSectionDto[];
+  fees_section?: {
+    content?: CollegeContentDto[];
+    fees?: {
+      course_group_id?: number;
+      course_group_name?: string;
+      course_group_full_name?: string;
+      fee_id?: number;
+      fee_type?: string;
+      total_min_fees?: number;
+      total_max_fees?: number;
+      description?: string;
+      total_tution_fees_min?: number;
+      total_tution_fees_max?: number;
+      min_one_time_fees?: number;
+      max_one_time_fees?: number;
+      max_hostel_fees?: number;
+      min_hostel_fees?: number;
+      min_other_fees?: number;
+      max_other_fees?: number;
+      duration?: string;
+      kapp_score?: number;
+    }[];
+  };
+}
