@@ -107,12 +107,20 @@ export class ExamsController {
     @Query("exam_level") examLevel?: string,
     @Query("exam_streams") examStreams?: string
   ): Promise<any> {
+    // Parse comma-separated values into arrays
+    const levelArray = examLevel
+      ? examLevel.split(",").map((s) => s.trim())
+      : undefined;
+    const streamsArray = examStreams
+      ? examStreams.split(",").map((s) => s.trim())
+      : undefined;
+
     return this.examsService.findAllExamsListing(
       page,
       limit,
       // examCategory,
-      examLevel,
-      examStreams
+      levelArray,
+      streamsArray
     );
   }
 
@@ -123,10 +131,15 @@ export class ExamsController {
     // @Query("exam_level") examLevel?: string,
     @Query("exam_streams") examStreams?: string
   ): Promise<any> {
+    // Parse comma-separated values into arrays
+    const streamsArray = examStreams
+      ? examStreams.split(",").map((s) => s.trim())
+      : undefined;
+
     return this.examsService.findTop3Exams(
       // examCategory,
       // examLevel,
-      examStreams
+      streamsArray
     );
   }
 
@@ -137,9 +150,14 @@ export class ExamsController {
     // @Query("exam_level") examLevel?: string,
     @Query("exam_streams") examStreams?: string
   ): Promise<any> {
+    // Parse comma-separated values into arrays
+    const streamsArray = examStreams
+      ? examStreams.split(",").map((s) => s.trim())
+      : undefined;
+
     return this.examsService.findAllExamsFilters(
       // examLevel,
-      examStreams
+      streamsArray
     );
   }
 

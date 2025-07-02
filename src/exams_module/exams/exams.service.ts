@@ -431,8 +431,8 @@ export class ExamsService {
     page: number,
     limit: number,
     // exam_category?: string,
-    exam_level?: string,
-    exam_streams?: string
+    exam_level?: string[],
+    exam_streams?: string[]
   ) {
     try {
       const offset = (page - 1) * limit;
@@ -441,17 +441,32 @@ export class ExamsService {
       const filters: string[] = [];
       const queryParams: any[] = [limit, offset];
 
-      // if (exam_category) {
-      //   filters.push(`e.exam_category = $${queryParams.length + 1}`);
-      //   queryParams.push(exam_category);
+      // if (exam_category && exam_category.length > 0) {
+      //   const categoryPlaceholders = exam_category.map((_, index) => `$${queryParams.length + index + 1}`).join(', ');
+      //   filters.push(`e.exam_category IN (${categoryPlaceholders})`);
+      //   queryParams.push(...exam_category);
       // }
-      if (exam_level) {
-        filters.push(`e.level_of_exam = $${queryParams.length + 1}`);
-        queryParams.push(exam_level);
+
+      if (exam_level && exam_level.length > 0) {
+        const levelConditions = exam_level
+          .map(
+            (_, index) =>
+              `LOWER(REPLACE(e.level_of_exam, ' ', '')) ILIKE LOWER(REPLACE($${queryParams.length + index + 1}, ' ', ''))`
+          )
+          .join(" OR ");
+        filters.push(`(${levelConditions})`);
+        queryParams.push(...exam_level);
       }
-      if (exam_streams) {
-        filters.push(`s.stream_name = $${queryParams.length + 1}`);
-        queryParams.push(exam_streams);
+
+      if (exam_streams && exam_streams.length > 0) {
+        const streamConditions = exam_streams
+          .map(
+            (_, index) =>
+              `LOWER(REPLACE(s.stream_name, ' ', '')) ILIKE LOWER(REPLACE($${queryParams.length + index + 1}, ' ', ''))`
+          )
+          .join(" OR ");
+        filters.push(`(${streamConditions})`);
+        queryParams.push(...exam_streams);
       }
 
       const filterQuery = filters.length ? `AND ${filters.join(" AND ")}` : "";
@@ -499,17 +514,32 @@ export class ExamsService {
       const totalCountParams: any[] = [];
       const totalFilters: string[] = [];
 
-      // if (exam_category) {
-      //   totalFilters.push(`e.exam_category = $${totalCountParams.length + 1}`);
-      //   totalCountParams.push(exam_category);
+      // if (exam_category && exam_category.length > 0) {
+      //   const categoryPlaceholders = exam_category.map((_, index) => `$${totalCountParams.length + index + 1}`).join(', ');
+      //   totalFilters.push(`e.exam_category IN (${categoryPlaceholders})`);
+      //   totalCountParams.push(...exam_category);
       // }
-      if (exam_level) {
-        totalFilters.push(`e.level_of_exam = $${totalCountParams.length + 1}`);
-        totalCountParams.push(exam_level);
+
+      if (exam_level && exam_level.length > 0) {
+        const levelConditions = exam_level
+          .map(
+            (_, index) =>
+              `LOWER(REPLACE(e.level_of_exam, ' ', '')) ILIKE LOWER(REPLACE($${totalCountParams.length + index + 1}, ' ', ''))`
+          )
+          .join(" OR ");
+        totalFilters.push(`(${levelConditions})`);
+        totalCountParams.push(...exam_level);
       }
-      if (exam_streams) {
-        totalFilters.push(`s.stream_name = $${totalCountParams.length + 1}`);
-        totalCountParams.push(exam_streams);
+
+      if (exam_streams && exam_streams.length > 0) {
+        const streamConditions = exam_streams
+          .map(
+            (_, index) =>
+              `LOWER(REPLACE(s.stream_name, ' ', '')) ILIKE LOWER(REPLACE($${totalCountParams.length + index + 1}, ' ', ''))`
+          )
+          .join(" OR ");
+        totalFilters.push(`(${streamConditions})`);
+        totalCountParams.push(...exam_streams);
       }
 
       const totalFilterQuery = totalFilters.length
@@ -552,24 +582,29 @@ export class ExamsService {
   async findTop3Exams(
     // exam_category?: string,
     // exam_level?: string,
-    exam_streams?: string
+    exam_streams?: string[]
   ) {
     try {
       // SQL filters and query parameters for exams list
       const filters: string[] = [];
       const queryParams: any[] = [];
 
-      // if (exam_category) {
-      //   filters.push(`e.exam_category = $${queryParams.length + 1}`);
-      //   queryParams.push(exam_category);
+      // if (exam_category && exam_category.length > 0) {
+      //   const categoryPlaceholders = exam_category.map((_, index) => `$${queryParams.length + index + 1}`).join(', ');
+      //   filters.push(`e.exam_category IN (${categoryPlaceholders})`);
+      //   queryParams.push(...exam_category);
       // }
-      // if (exam_level) {
-      //   filters.push(`e.level_of_exam = $${queryParams.length + 1}`);
-      //   queryParams.push(exam_level);
+      // if (exam_level && exam_level.length > 0) {
+      //   const levelPlaceholders = exam_level.map((_, index) => `$${queryParams.length + index + 1}`).join(', ');
+      //   filters.push(`e.level_of_exam IN (${levelPlaceholders})`);
+      //   queryParams.push(...exam_level);
       // }
-      if (exam_streams) {
-        filters.push(`s.stream_name = $${queryParams.length + 1}`);
-        queryParams.push(exam_streams);
+      if (exam_streams && exam_streams.length > 0) {
+        const streamPlaceholders = exam_streams
+          .map((_, index) => `$${queryParams.length + index + 1}`)
+          .join(", ");
+        filters.push(`s.stream_name IN (${streamPlaceholders})`);
+        queryParams.push(...exam_streams);
       }
 
       const filterQuery = filters.length ? `AND ${filters.join(" AND ")}` : "";
@@ -606,20 +641,32 @@ export class ExamsService {
   }
 
   async findAllExamsFilters(
-    exam_level?: string,
-    exam_streams?: string
+    exam_level?: string[],
+    exam_streams?: string[]
   ): Promise<ExamFiltersResponseDto> {
     try {
       const filters: string[] = [];
       const queryParams: any[] = [];
 
-      if (exam_level) {
-        filters.push(`e.level_of_exam = $${queryParams.length + 1}`);
-        queryParams.push(exam_level);
+      if (exam_level && exam_level.length > 0) {
+        const levelConditions = exam_level
+          .map(
+            (_, index) =>
+              `LOWER(REPLACE(e.level_of_exam, ' ', '')) ILIKE LOWER(REPLACE($${queryParams.length + index + 1}, ' ', ''))`
+          )
+          .join(" OR ");
+        filters.push(`(${levelConditions})`);
+        queryParams.push(...exam_level);
       }
-      if (exam_streams) {
-        filters.push(`s.stream_name = $${queryParams.length + 1}`);
-        queryParams.push(exam_streams);
+      if (exam_streams && exam_streams.length > 0) {
+        const streamConditions = exam_streams
+          .map(
+            (_, index) =>
+              `LOWER(REPLACE(s.stream_name, ' ', '')) ILIKE LOWER(REPLACE($${queryParams.length + index + 1}, ' ', ''))`
+          )
+          .join(" OR ");
+        filters.push(`(${streamConditions})`);
+        queryParams.push(...exam_streams);
       }
 
       const filterQuery = filters.length ? `AND ${filters.join(" AND ")}` : "";
