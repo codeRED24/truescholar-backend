@@ -430,7 +430,7 @@ export class ExamsService {
   async findAllExamsListing(
     page: number,
     limit: number,
-    // exam_category?: string,
+    mode_of_exam?: string[],
     exam_level?: string[],
     exam_streams?: string[]
   ) {
@@ -441,11 +441,16 @@ export class ExamsService {
       const filters: string[] = [];
       const queryParams: any[] = [limit, offset];
 
-      // if (exam_category && exam_category.length > 0) {
-      //   const categoryPlaceholders = exam_category.map((_, index) => `$${queryParams.length + index + 1}`).join(', ');
-      //   filters.push(`e.exam_category IN (${categoryPlaceholders})`);
-      //   queryParams.push(...exam_category);
-      // }
+      if (mode_of_exam && mode_of_exam.length > 0) {
+        const modeConditions = mode_of_exam
+          .map(
+            (_, index) =>
+              `LOWER(REPLACE(e.mode_of_exam, ' ', '')) ILIKE LOWER(REPLACE($${queryParams.length + index + 1}, ' ', ''))`
+          )
+          .join(" OR ");
+        filters.push(`(${modeConditions})`);
+        queryParams.push(...mode_of_exam);
+      }
 
       if (exam_level && exam_level.length > 0) {
         const levelConditions = exam_level
@@ -491,6 +496,7 @@ export class ExamsService {
               e.exam_fee_max,
               e.exam_shortname,
               e.application_start_date,
+              e.mode_of_exam,
               e.application_end_date,
               e.exam_date,
               e.result_date,
@@ -514,11 +520,16 @@ export class ExamsService {
       const totalCountParams: any[] = [];
       const totalFilters: string[] = [];
 
-      // if (exam_category && exam_category.length > 0) {
-      //   const categoryPlaceholders = exam_category.map((_, index) => `$${totalCountParams.length + index + 1}`).join(', ');
-      //   totalFilters.push(`e.exam_category IN (${categoryPlaceholders})`);
-      //   totalCountParams.push(...exam_category);
-      // }
+      if (mode_of_exam && mode_of_exam.length > 0) {
+        const modeConditions = mode_of_exam
+          .map(
+            (_, index) =>
+              `LOWER(REPLACE(e.mode_of_exam, ' ', '')) ILIKE LOWER(REPLACE($${totalCountParams.length + index + 1}, ' ', ''))`
+          )
+          .join(" OR ");
+        totalFilters.push(`(${modeConditions})`);
+        totalCountParams.push(...mode_of_exam);
+      }
 
       if (exam_level && exam_level.length > 0) {
         const levelConditions = exam_level

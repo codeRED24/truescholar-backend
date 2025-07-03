@@ -103,7 +103,7 @@ export class ExamsController {
   async getAllExamsListing(
     @Query("page") page: number = 1,
     @Query("pageSize") limit: number = 15,
-    // @Query("exam_category") examCategory?: string,
+    @Query("mode_of_exam") modeOfExam?: string,
     @Query("exam_level") examLevel?: string,
     @Query("exam_streams") examStreams?: string
   ): Promise<any> {
@@ -114,11 +114,14 @@ export class ExamsController {
     const streamsArray = examStreams
       ? examStreams.split(",").map((s) => s.trim())
       : undefined;
+    const modeOfExamArray = modeOfExam
+      ? modeOfExam.split(",").map((s) => s.trim())
+      : undefined;
 
     return this.examsService.findAllExamsListing(
       page,
       limit,
-      // examCategory,
+      modeOfExamArray,
       levelArray,
       streamsArray
     );
