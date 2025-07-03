@@ -34,7 +34,6 @@ export class CollegeListingDto {
   meta_desc?: string;
   is_online?: boolean;
   college_brochure: string;
-
 }
 export class CollegeFilterDto {
   city_filter: Array<{
