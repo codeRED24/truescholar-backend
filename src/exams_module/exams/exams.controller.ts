@@ -149,19 +149,15 @@ export class ExamsController {
   @Get("/exam-filters")
   @ApiOperation({ summary: "Get all exams with listing fields and filters" })
   @ApiQuery({ name: "exam_level", required: false })
-  async getExamFilters(
-    // @Query("exam_level") examLevel?: string,
-    @Query("exam_streams") examStreams?: string
-  ): Promise<any> {
+  async getExamFilters() // @Query("exam_level") examLevel?: string,
+  // @Query("exam_streams") examStreams?: string
+  : Promise<any> {
     // Parse comma-separated values into arrays
-    const streamsArray = examStreams
-      ? examStreams.split(",").map((s) => s.trim())
-      : undefined;
+    // const streamsArray = examStreams
+    //   ? examStreams.split(",").map((s) => s.trim())
+    //   : undefined;
 
-    return this.examsService.findAllExamsFilters(
-      // examLevel,
-      streamsArray
-    );
+    return this.examsService.findAllExamsFilters();
   }
 
   @Post("/bulk")
