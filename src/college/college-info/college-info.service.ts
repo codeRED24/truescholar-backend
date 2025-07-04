@@ -127,6 +127,28 @@ export class CollegeInfoService {
     }
   }
 
+  feeRanges = {
+    below_50k: {
+      min: 0,
+      max: 49999,
+    },
+    "50k_150k": {
+      min: 50000,
+      max: 149999,
+    },
+    "150k_300k": {
+      min: 150000,
+      max: 299999,
+    },
+    "300k_500k": {
+      min: 300000,
+      max: 499999,
+    },
+    above_500k: {
+      min: 500000,
+    },
+  };
+
   async findAll(
     college_name?: string,
     city_name?: string[],
@@ -134,11 +156,23 @@ export class CollegeInfoService {
     // country_id?: number,
     type_of_institute?: string[],
     stream_name?: string[],
+    fee_range?: string[],
     is_active?: boolean,
     page: number = 1,
     limit: number = 51000
   ): Promise<CollegeListingResponseDto> {
     const offset = (page - 1) * limit;
+
+    // console.log({
+    //   college_name,
+    //   city_name,
+    //   state_name,
+    //   type_of_institute,
+    //   stream_name,
+    //   is_active,
+    //   page,
+    //   limit,
+    // });
 
     // Helper function to apply common filters
     const applyFilters = (queryBuilder: any) => {
@@ -155,29 +189,51 @@ export class CollegeInfoService {
       });
 
       // Apply parameter-based filters
-      if (city_name) {
-        queryBuilder.andWhere("city.name ILIKE :city_name", {
-          city_name: `%${city_name}%`,
-        });
-      }
-
-      if (state_name) {
-        queryBuilder.andWhere("state.name ILIKE :state_name", {
-          state_name: `%${state_name}%`,
-        });
-      }
-
-      if (type_of_institute) {
+      if (Array.isArray(city_name) && city_name.length > 0) {
+        const normalizedCity = city_name[0]
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "");
         queryBuilder.andWhere(
-          "collegeInfo.type_of_institute = :type_of_institute",
-          { type_of_institute }
+          `REGEXP_REPLACE(LOWER(city.name), '[^a-z0-9]', '', 'g') ILIKE :city_name`,
+          {
+            city_name: `%${normalizedCity}%`,
+          }
         );
       }
 
-      if (stream_name) {
-        queryBuilder.andWhere("stream.stream_name ILIKE :stream_name", {
-          stream_name: `%${stream_name}%`,
-        });
+      if (Array.isArray(state_name) && state_name.length > 0) {
+        const normalizedState = state_name[0]
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "");
+        queryBuilder.andWhere(
+          `REGEXP_REPLACE(LOWER(state.name), '[^a-z0-9]', '', 'g') ILIKE :state_name`,
+          {
+            state_name: `%${normalizedState}%`,
+          }
+        );
+      }
+
+      if (Array.isArray(type_of_institute) && type_of_institute.length > 0) {
+        queryBuilder.andWhere(
+          `REGEXP_REPLACE(LOWER(CAST(collegeInfo.type_of_institute AS TEXT)), '[^a-z0-9]', '', 'g') = :type_of_institute`,
+          {
+            type_of_institute: type_of_institute[0]
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, ""),
+          }
+        );
+      }
+
+      if (Array.isArray(stream_name) && stream_name.length > 0) {
+        const normalizedStream = stream_name[0]
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "");
+        queryBuilder.andWhere(
+          `REGEXP_REPLACE(LOWER(stream.stream_name), '[^a-z0-9]', '', 'g') ILIKE :stream_name`,
+          {
+            stream_name: `%${normalizedStream}%`,
+          }
+        );
       }
 
       if (college_name) {
