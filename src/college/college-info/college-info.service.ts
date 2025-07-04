@@ -127,30 +127,57 @@ export class CollegeInfoService {
     }
   }
 
+  feeRanges = {
+    below_50k: {
+      min: 0,
+      max: 49999,
+    },
+    "50k_150k": {
+      min: 50000,
+      max: 149999,
+    },
+    "150k_300k": {
+      min: 150000,
+      max: 299999,
+    },
+    "300k_500k": {
+      min: 300000,
+      max: 499999,
+    },
+    above_500k: {
+      min: 500000,
+    },
+  };
+
   async findAll(
     college_name?: string,
-    city_id?: number,
-    state_id?: number,
-    country_id?: number,
-    primary_stream_id?: number,
+    city_name?: string[],
+    state_name?: string[],
+    // country_id?: number,
+    type_of_institute?: string[],
+    stream_name?: string[],
+    fee_range?: string[],
     is_active?: boolean,
     page: number = 1,
     limit: number = 51000
   ): Promise<CollegeListingResponseDto> {
     const offset = (page - 1) * limit;
 
-    // Select only necessary fields from `college_info`
-    const countQueryBuilder = this.collegeInfoRepository
-      .createQueryBuilder("collegeInfo")
-      .leftJoin("collegeInfo.city", "city")
-      .where("city.is_active = :isActive", { isActive: true });
+    // console.log({
+    //   college_name,
+    //   city_name,
+    //   state_name,
+    //   type_of_institute,
+    //   stream_name,
+    //   is_active,
+    //   page,
+    //   limit,
+    // });
 
-    const queryBuilder = this.collegeInfoRepository
-      .createQueryBuilder("collegeInfo")
-      .leftJoinAndSelect("collegeInfo.city", "city")
-      .leftJoinAndSelect("collegeInfo.state", "state")
-      .leftJoinAndSelect("collegeInfo.primaryStream", "stream")
-      .where((qb) => {
+    // Helper function to apply common filters
+    const applyFilters = (queryBuilder: any) => {
+      // Apply subquery filter for active college content
+      queryBuilder.where((qb) => {
         const subQuery = qb
           .subQuery()
           .select("1")
@@ -159,79 +186,123 @@ export class CollegeInfoService {
           .andWhere("cc.is_active = true")
           .getQuery();
         return `EXISTS (${subQuery})`;
-      })
-      .select([
-        "collegeInfo.college_id",
-        "collegeInfo.slug",
-        "collegeInfo.college_name",
-        "collegeInfo.city_id",
-        "collegeInfo.state_id",
-        "collegeInfo.primary_stream_id",
-        "collegeInfo.type_of_institute",
-        "collegeInfo.kapp_rating",
-        "collegeInfo.parent_college_id",
-        "collegeInfo.is_active",
-        "collegeInfo.short_name",
-        "collegeInfo.nacc_grade",
-        "collegeInfo.UGC_approved",
-        "collegeInfo.logo_img",
-        "collegeInfo.banner_img",
-        "city.name",
-        "state.name",
-        "stream.stream_name",
-        "collegeInfo.is_university",
-        "collegeInfo.affiliated_university_id",
-        "collegeInfo.kapp_score",
-        "collegeInfo.college_brochure",
-        "city.slug",
-        "state.slug",
-        "stream.slug",
-      ])
+      });
+
+      // Apply parameter-based filters
+      if (Array.isArray(city_name) && city_name.length > 0) {
+        const normalizedCity = city_name[0]
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "");
+        queryBuilder.andWhere(
+          `REGEXP_REPLACE(LOWER(city.name), '[^a-z0-9]', '', 'g') ILIKE :city_name`,
+          {
+            city_name: `%${normalizedCity}%`,
+          }
+        );
+      }
+
+      if (Array.isArray(state_name) && state_name.length > 0) {
+        const normalizedState = state_name[0]
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "");
+        queryBuilder.andWhere(
+          `REGEXP_REPLACE(LOWER(state.name), '[^a-z0-9]', '', 'g') ILIKE :state_name`,
+          {
+            state_name: `%${normalizedState}%`,
+          }
+        );
+      }
+
+      if (Array.isArray(type_of_institute) && type_of_institute.length > 0) {
+        queryBuilder.andWhere(
+          `REGEXP_REPLACE(LOWER(CAST(collegeInfo.type_of_institute AS TEXT)), '[^a-z0-9]', '', 'g') = :type_of_institute`,
+          {
+            type_of_institute: type_of_institute[0]
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, ""),
+          }
+        );
+      }
+
+      if (Array.isArray(stream_name) && stream_name.length > 0) {
+        const normalizedStream = stream_name[0]
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "");
+        queryBuilder.andWhere(
+          `REGEXP_REPLACE(LOWER(stream.stream_name), '[^a-z0-9]', '', 'g') ILIKE :stream_name`,
+          {
+            stream_name: `%${normalizedStream}%`,
+          }
+        );
+      }
+
+      if (college_name) {
+        queryBuilder.andWhere("collegeInfo.college_name LIKE :college_name", {
+          college_name: `%${college_name}%`,
+        });
+      }
+
+      // Handle is_active filter
+      const activeStatus =
+        is_active === undefined || is_active === null ? true : is_active;
+      queryBuilder.andWhere("collegeInfo.is_active = :is_active", {
+        is_active: activeStatus,
+      });
+
+      // Ensure city is active
+      queryBuilder.andWhere("city.is_active = :isActive", { isActive: true });
+
+      return queryBuilder;
+    };
+
+    // Base query builder with joins and selections
+    const baseQueryBuilder = applyFilters(
+      this.collegeInfoRepository
+        .createQueryBuilder("collegeInfo")
+        .leftJoinAndSelect("collegeInfo.city", "city")
+        .leftJoinAndSelect("collegeInfo.state", "state")
+        .leftJoinAndSelect("collegeInfo.primaryStream", "stream")
+        .select([
+          "collegeInfo.college_id",
+          "collegeInfo.slug",
+          "collegeInfo.college_name",
+          "collegeInfo.city_id",
+          "collegeInfo.state_id",
+          "collegeInfo.primary_stream_id",
+          "collegeInfo.type_of_institute",
+          "collegeInfo.kapp_rating",
+          "collegeInfo.parent_college_id",
+          "collegeInfo.is_active",
+          "collegeInfo.short_name",
+          "collegeInfo.nacc_grade",
+          "collegeInfo.UGC_approved",
+          "collegeInfo.logo_img",
+          "collegeInfo.banner_img",
+          "city.name",
+          "state.name",
+          "stream.stream_name",
+          "collegeInfo.is_university",
+          "collegeInfo.affiliated_university_id",
+          "collegeInfo.kapp_score",
+          "collegeInfo.college_brochure",
+          "city.slug",
+          "state.slug",
+          "stream.slug",
+        ])
+    );
+
+    // Create paginated query builder
+    const paginatedQueryBuilder = baseQueryBuilder
+      .clone()
       .skip(offset)
       .take(limit)
       .orderBy("collegeInfo.kapp_score", "DESC");
 
-    // Apply filters based on incoming parameters
-    if (city_id) {
-      queryBuilder.andWhere("collegeInfo.city_id = :city_id", { city_id });
-    }
-    if (state_id) {
-      queryBuilder.andWhere("collegeInfo.state_id = :state_id", { state_id });
-    }
-    if (country_id) {
-      queryBuilder.andWhere("collegeInfo.country_id = :country_id", {
-        country_id,
-      });
-    }
-    if (is_active === undefined || is_active === null) {
-      queryBuilder.andWhere("collegeInfo.is_active = :is_active", {
-        is_active: true,
-      });
-    } else {
-      queryBuilder.andWhere("collegeInfo.is_active = :is_active", {
-        is_active,
-      });
-    }
-
-    if (primary_stream_id) {
-      queryBuilder.andWhere(
-        "collegeInfo.primary_stream_id = :primary_stream_id",
-        {
-          primary_stream_id,
-        }
-      );
-    }
-    if (college_name) {
-      queryBuilder.andWhere("collegeInfo.college_name LIKE :college_name", {
-        college_name: `%${college_name}%`,
-      });
-    }
-    queryBuilder.andWhere("city.is_active = :isActive", { isActive: true });
-
-    const totalCollegesCount = await countQueryBuilder.getCount();
-
-    // Execute the query to fetch college data
-    const colleges = await queryBuilder.getMany();
+    // Get total count and paginated results
+    const [totalCollegesCount, colleges] = await Promise.all([
+      baseQueryBuilder.getCount(),
+      paginatedQueryBuilder.getMany(),
+    ]);
 
     if (!colleges.length) {
       return {
@@ -340,7 +411,7 @@ export class CollegeInfoService {
       if (!map[collegeId]) {
         map[collegeId] = {};
       }
-      if (!map[collegeId][item.name]) {
+      if (!map[collegeId][item.specialization_name]) {
         map[collegeId][item.specialization_name] = {
           name: item.specialization_name,
           count: 0,
@@ -353,18 +424,33 @@ export class CollegeInfoService {
       return map;
     }, {});
 
-    // Assemble final response with merged data
-    const result = colleges.map((college) => {
-      const fees = feeMap[college.college_id] || {
-        min_tuition_fees: null,
-        max_tuition_fees: null,
-      };
-      const no_of_courses = courseCountMap[college.college_id] || 0;
-      const placement = placementMap[college.college_id] || {
-        min_salary: null,
-        max_salary: null,
-      };
-      const rankings = rankingMap.get(college.college_id) || {};
+    // Helper function to map college data
+    const mapCollegeData = (
+      college: any,
+      includeRelatedData: boolean = true
+    ) => {
+      const fees = includeRelatedData
+        ? feeMap[college.college_id] || {
+            min_tuition_fees: null,
+            max_tuition_fees: null,
+          }
+        : { min_tuition_fees: null, max_tuition_fees: null };
+
+      const no_of_courses = includeRelatedData
+        ? courseCountMap[college.college_id] || 0
+        : 0;
+
+      const placement = includeRelatedData
+        ? placementMap[college.college_id] || {
+            min_salary: null,
+            max_salary: null,
+          }
+        : { min_salary: null, max_salary: null };
+
+      const rankings = includeRelatedData
+        ? rankingMap.get(college.college_id) || {}
+        : {};
+
       return {
         college_id: college.college_id,
         slug: college.slug,
@@ -399,19 +485,34 @@ export class CollegeInfoService {
         state_slug: college.state ? college.state.slug : null,
         stream_slug: college.primaryStream ? college.primaryStream.slug : null,
         college_brochure: college.college_brochure,
-        rankings: {
-          nirf_ranking: rankings[5] || null,
-          times_ranking: rankings[4] || null,
-          india_today_ranking: rankings[1] || null,
-        },
+        rankings: includeRelatedData
+          ? {
+              nirf_ranking: rankings[5] || null,
+              times_ranking: rankings[4] || null,
+              india_today_ranking: rankings[1] || null,
+            }
+          : {
+              nirf_ranking: null,
+              times_ranking: null,
+              india_today_ranking: null,
+            },
       } as CollegeListingDto;
-    });
+    };
 
-    // Build the filter_section
+    // Assemble final response with merged data
+    const result = colleges.map((college) => mapCollegeData(college, true));
+
+    // Sort the result
     const sortedResult = result.sort((a, b) => b.kapp_score - a.kapp_score);
 
+    // Get all matching colleges for filter section
+    const allMatchingColleges = await baseQueryBuilder.getMany();
+    const allCollegesForFilter = allMatchingColleges.map((college) =>
+      mapCollegeData(college, false)
+    );
+
     const filterSection = this.buildCollegeFilterSection(
-      sortedResult,
+      allCollegesForFilter,
       specializationMap
     );
 

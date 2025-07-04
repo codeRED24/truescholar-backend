@@ -430,7 +430,7 @@ export class ExamsService {
   async findAllExamsListing(
     page: number,
     limit: number,
-    // exam_category?: string,
+    mode_of_exam?: string[],
     exam_level?: string[],
     exam_streams?: string[]
   ) {
@@ -441,11 +441,16 @@ export class ExamsService {
       const filters: string[] = [];
       const queryParams: any[] = [limit, offset];
 
-      // if (exam_category && exam_category.length > 0) {
-      //   const categoryPlaceholders = exam_category.map((_, index) => `$${queryParams.length + index + 1}`).join(', ');
-      //   filters.push(`e.exam_category IN (${categoryPlaceholders})`);
-      //   queryParams.push(...exam_category);
-      // }
+      if (mode_of_exam && mode_of_exam.length > 0) {
+        const modeConditions = mode_of_exam
+          .map(
+            (_, index) =>
+              `LOWER(REPLACE(e.mode_of_exam, ' ', '')) ILIKE LOWER(REPLACE($${queryParams.length + index + 1}, ' ', ''))`
+          )
+          .join(" OR ");
+        filters.push(`(${modeConditions})`);
+        queryParams.push(...mode_of_exam);
+      }
 
       if (exam_level && exam_level.length > 0) {
         const levelConditions = exam_level
@@ -491,6 +496,7 @@ export class ExamsService {
               e.exam_fee_max,
               e.exam_shortname,
               e.application_start_date,
+              e.mode_of_exam,
               e.application_end_date,
               e.exam_date,
               e.result_date,
@@ -514,11 +520,16 @@ export class ExamsService {
       const totalCountParams: any[] = [];
       const totalFilters: string[] = [];
 
-      // if (exam_category && exam_category.length > 0) {
-      //   const categoryPlaceholders = exam_category.map((_, index) => `$${totalCountParams.length + index + 1}`).join(', ');
-      //   totalFilters.push(`e.exam_category IN (${categoryPlaceholders})`);
-      //   totalCountParams.push(...exam_category);
-      // }
+      if (mode_of_exam && mode_of_exam.length > 0) {
+        const modeConditions = mode_of_exam
+          .map(
+            (_, index) =>
+              `LOWER(REPLACE(e.mode_of_exam, ' ', '')) ILIKE LOWER(REPLACE($${totalCountParams.length + index + 1}, ' ', ''))`
+          )
+          .join(" OR ");
+        totalFilters.push(`(${modeConditions})`);
+        totalCountParams.push(...mode_of_exam);
+      }
 
       if (exam_level && exam_level.length > 0) {
         const levelConditions = exam_level
@@ -677,7 +688,8 @@ export class ExamsService {
           s.stream_name,
           e.stream_id,
           ec.silos,
-          e.level_of_exam
+          e.level_of_exam,
+          e.mode_of_exam
           FROM exam e
           LEFT JOIN stream s ON e.stream_id = s.stream_id
           LEFT JOIN exam_content ec ON e.exam_id = ec.exam_id
@@ -707,20 +719,20 @@ export class ExamsService {
   }
 
   private buildFilterSection(exams): {
-    // exam_category: { value: string; count: number }[];
+    mode_of_exam: { value: string; count: number }[];
     level_of_exam: { value: string; count: number }[];
     exam_streams: { value: string; count: number }[];
   } {
-    const examCategoryMap: { [key: string]: number } = {};
+    const modeOfExamMap: { [key: string]: number } = {};
     const levelOfExamMap: { [key: string]: number } = {};
     const streamNameMap: { [key: string]: number } = {};
 
     // Iterate through each exam to populate the maps
     exams.forEach((exam) => {
-      // if (exam.exam_category) {
-      //   examCategoryMap[exam.exam_category] =
-      //     (examCategoryMap[exam.exam_category] || 0) + 1;
-      // }
+      if (exam.mode_of_exam) {
+        modeOfExamMap[exam.mode_of_exam] =
+          (modeOfExamMap[exam.mode_of_exam] || 0) + 1;
+      }
       if (exam.level_of_exam) {
         levelOfExamMap[exam.level_of_exam] =
           (levelOfExamMap[exam.level_of_exam] || 0) + 1;
@@ -733,12 +745,13 @@ export class ExamsService {
     });
 
     // Convert maps to arrays of objects with value and count
-    // const exam_category = Object.keys(examCategoryMap)
-    //   .map((value) => ({
-    //     value,
-    //     count: examCategoryMap[value],
-    //   }))
-    //   .sort((a, b) => b.count - a.count);
+
+    const mode_of_exam = Object.keys(modeOfExamMap)
+      .map((value) => ({
+        value,
+        count: modeOfExamMap[value],
+      }))
+      .sort((a, b) => b.count - a.count);
 
     const level_of_exam = Object.keys(levelOfExamMap)
       .map((value) => ({
@@ -756,7 +769,7 @@ export class ExamsService {
 
     // Return the filter_section object
     return {
-      // exam_category,
+      mode_of_exam,
       exam_streams,
       level_of_exam,
     };

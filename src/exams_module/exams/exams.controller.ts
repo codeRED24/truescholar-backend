@@ -103,7 +103,7 @@ export class ExamsController {
   async getAllExamsListing(
     @Query("page") page: number = 1,
     @Query("pageSize") limit: number = 15,
-    // @Query("exam_category") examCategory?: string,
+    @Query("mode_of_exam") modeOfExam?: string,
     @Query("exam_level") examLevel?: string,
     @Query("exam_streams") examStreams?: string
   ): Promise<any> {
@@ -114,11 +114,14 @@ export class ExamsController {
     const streamsArray = examStreams
       ? examStreams.split(",").map((s) => s.trim())
       : undefined;
+    const modeOfExamArray = modeOfExam
+      ? modeOfExam.split(",").map((s) => s.trim())
+      : undefined;
 
     return this.examsService.findAllExamsListing(
       page,
       limit,
-      // examCategory,
+      modeOfExamArray,
       levelArray,
       streamsArray
     );
@@ -146,19 +149,15 @@ export class ExamsController {
   @Get("/exam-filters")
   @ApiOperation({ summary: "Get all exams with listing fields and filters" })
   @ApiQuery({ name: "exam_level", required: false })
-  async getExamFilters(
-    // @Query("exam_level") examLevel?: string,
-    @Query("exam_streams") examStreams?: string
-  ): Promise<any> {
+  async getExamFilters() // @Query("exam_level") examLevel?: string,
+  // @Query("exam_streams") examStreams?: string
+  : Promise<any> {
     // Parse comma-separated values into arrays
-    const streamsArray = examStreams
-      ? examStreams.split(",").map((s) => s.trim())
-      : undefined;
+    // const streamsArray = examStreams
+    //   ? examStreams.split(",").map((s) => s.trim())
+    //   : undefined;
 
-    return this.examsService.findAllExamsFilters(
-      // examLevel,
-      streamsArray
-    );
+    return this.examsService.findAllExamsFilters();
   }
 
   @Post("/bulk")

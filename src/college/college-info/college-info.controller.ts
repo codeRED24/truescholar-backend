@@ -61,7 +61,7 @@ export class CollegeInfoController {
     description: "ID of the country",
   })
   @ApiQuery({
-    name: "stream_id",
+    name: "stream_name",
     required: false,
     description: "ID of the stream",
   })
@@ -85,20 +85,58 @@ export class CollegeInfoController {
   @ApiResponse({ status: 200, description: "List of college info." })
   findAll(
     @Query("college_name") college_name?: string,
-    @Query("city_id") city_id?: number,
-    @Query("state_id") state_id?: number,
-    @Query("country_id") country_id?: number,
-    @Query("primary_stream_id") primary_stream_id?: number,
+    @Query("city_name") city_name?: string,
+    @Query("state_name") state_name?: string,
+    // @Query("country_id") country_id?: number,
+    @Query("type_of_institute") type_of_institute?: string,
+    @Query("stream_name") stream_name?: string,
     @Query("is_active") is_active?: boolean,
+    @Query("fee_range") fee_range?: string,
     @Query("page") page: number = 1,
     @Query("limit") limit: number = 51000
   ): Promise<CollegeListingResponseDto> {
+    console.log({
+      city_name,
+      state_name,
+      // country_id,
+      type_of_institute,
+      stream_name,
+      fee_range,
+      is_active,
+      page,
+      limit,
+    });
+    const citiesArray = city_name
+      ? city_name.split(",").map((s) => s.trim())
+      : undefined;
+    const statesArray = state_name
+      ? state_name.split(",").map((s) => s.trim())
+      : undefined;
+    const streamsArray = stream_name
+      ? stream_name.split(",").map((s) => s.trim())
+      : undefined;
+    const typeOfInstituteArray = type_of_institute
+      ? type_of_institute.split(",").map((s) => s.trim())
+      : undefined;
+    const feeRangeArray = fee_range
+      ? fee_range.split(",").map((s) => s.trim())
+      : undefined;
+
+    console.log({
+      citiesArray,
+      statesArray,
+      streamsArray,
+      typeOfInstituteArray,
+      feeRangeArray,
+    });
     return this.collegeInfoService.findAll(
       college_name,
-      city_id,
-      state_id,
-      country_id,
-      primary_stream_id,
+      citiesArray,
+      statesArray,
+      // country_id,
+      typeOfInstituteArray,
+      streamsArray,
+      feeRangeArray,
       is_active,
       page,
       limit
@@ -266,7 +304,6 @@ export class CollegeInfoController {
     return this.collegeInfoService.getCoursesAndFees(id, schema);
   }
 
-
   @Get("courses-filters/:id")
   async getCoursesFilters(
     @Param("id") id: number,
@@ -275,9 +312,14 @@ export class CollegeInfoController {
     @Query("mode") mode?: string,
     @Query("course_group_full_name") course_group_full_name?: string
   ) {
-    return this.collegeInfoService.getCoursesFilters(id,  stream_name, level, mode,course_group_full_name);
+    return this.collegeInfoService.getCoursesFilters(
+      id,
+      stream_name,
+      level,
+      mode,
+      course_group_full_name
+    );
   }
-
 
   @Get("fees/:id")
   async getFees(@Param("id") id: number, @Query("schema") schema?: boolean) {
@@ -322,13 +364,20 @@ export class CollegeInfoController {
   @Get("cutoffs-filters/:id")
   async getCutoffsFilters(
     @Param("id") id: number,
-    @Query("exam_id") exam_id?:number,
+    @Query("exam_id") exam_id?: number,
     @Query("category_section") category?: string,
     @Query("quota_section") quota?: string,
     @Query("round_section") round?: string,
     @Query("gender_section") gender?: string
   ) {
-    return this.collegeInfoService.getCutoffsFilters(id, exam_id, round,gender, category, quota,);
+    return this.collegeInfoService.getCutoffsFilters(
+      id,
+      exam_id,
+      round,
+      gender,
+      category,
+      quota
+    );
   }
 
   @Get("filtered-cutoffs/:id")
@@ -341,7 +390,15 @@ export class CollegeInfoController {
     @Query("gender_section") gender?: string,
     @Query("page") page: number = 1
   ): Promise<any> {
-    return this.collegeInfoService.getFilteredCutOffData(id, exam_id, category, quota, round, gender, page);
+    return this.collegeInfoService.getFilteredCutOffData(
+      id,
+      exam_id,
+      category,
+      quota,
+      round,
+      gender,
+      page
+    );
   }
 
   @Get("rankings/:id")
