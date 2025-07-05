@@ -127,24 +127,38 @@ export class CollegeInfoService {
     }
   }
 
+  private getFeeRangeConditions(
+    feeRanges: string[]
+  ): { min: number; max?: number }[] {
+    const conditions: { min: number; max?: number }[] = [];
+
+    feeRanges.forEach((range) => {
+      if (this.feeRanges[range]) {
+        conditions.push(this.feeRanges[range]);
+      }
+    });
+
+    return conditions;
+  }
+
   feeRanges = {
-    below_50k: {
+    below50k: {
       min: 0,
       max: 49999,
     },
-    "50k_150k": {
+    "50k150k": {
       min: 50000,
       max: 149999,
     },
-    "150k_300k": {
+    "150k300k": {
       min: 150000,
       max: 299999,
     },
-    "300k_500k": {
+    "300k500k": {
       min: 300000,
       max: 499999,
     },
-    above_500k: {
+    above500k: {
       min: 500000,
     },
   };
@@ -251,6 +265,50 @@ export class CollegeInfoService {
 
       // Ensure city is active
       queryBuilder.andWhere("city.is_active = :isActive", { isActive: true });
+
+      // fee range filter
+      if (Array.isArray(fee_range) && fee_range.length > 0) {
+        const feeConditions = this.getFeeRangeConditions(fee_range);
+
+        if (feeConditions.length > 0) {
+          // Build the fee filter conditions
+          const feeFilterConditions: string[] = [];
+          const feeFilterParams: any = {};
+
+          feeConditions.forEach((condition, index) => {
+            const paramMin = `feeMin${index}`;
+            const paramMax = `feeMax${index}`;
+
+            // console.log({ paramMin, paramMax, condition });
+
+            if (condition.max !== undefined) {
+              // Range has both min and max - check if college has ANY course in this range
+              feeFilterConditions.push(
+                `(cwf.total_min_fees >= :${paramMin} AND cwf.total_min_fees <= :${paramMax})`
+              );
+              feeFilterParams[paramMin] = condition.min;
+              feeFilterParams[paramMax] = condition.max;
+            } else {
+              // Range has only min (above_500k case) - check if college has ANY course above this amount
+              feeFilterConditions.push(`cwf.total_min_fees >= :${paramMin}`);
+              feeFilterParams[paramMin] = condition.min;
+            }
+          });
+
+          // Apply the fee filter using EXISTS with individual row checking (not aggregated)
+          const feeSubQuery = `
+      EXISTS (
+        SELECT 1 
+        FROM college_wise_fees cwf 
+        WHERE cwf.college_id = collegeInfo.college_id 
+          AND cwf.total_min_fees IS NOT NULL
+          AND (${feeFilterConditions.join(" OR ")})
+      )
+    `;
+
+          queryBuilder.andWhere(feeSubQuery, feeFilterParams);
+        }
+      }
 
       return queryBuilder;
     };
