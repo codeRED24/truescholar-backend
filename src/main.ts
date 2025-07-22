@@ -33,7 +33,7 @@ async function bootstrap() {
   SwaggerModule.setup("api", app, document);
 
   const allowedOrigins = [
-    "https://www.kollegeapply.com",
+    "https://www.truescholar.in",
     "https://main.d11ru2go6oqfip.amplifyapp.com",
     "https://stage.d3lclg6mfctqxo.amplifyapp.com", // CMS Stage
     "https://stage.d3idi0ktyuzfgf.amplifyapp.com", // Kapp Stage
