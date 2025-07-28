@@ -28,16 +28,16 @@ import { File, FileInterceptor } from "@nest-lab/fastify-multer";
 export class ArticlesController {
   constructor(private readonly articlesService: ArticlesService) {}
 
-  @Post("/create")
-  @UseInterceptors(FileInterceptor("og_featured_img"))
-  create(
-    @Body(ValidationPipe) createArticleCMSDto: CreateArticleCMSDto,
-    @Req() req: any,
-    @UploadedFile() og_featured_img?: File
-  ) {
-    const user_id = req.user?.userId;
-    return this.articlesService.create(createArticleCMSDto, user_id, og_featured_img);
-  }
+  // @Post("/create")
+  // @UseInterceptors(FileInterceptor("og_featured_img"))
+  // create(
+  //   @Body(ValidationPipe) createArticleCMSDto: CreateArticleCMSDto,
+  //   @Req() req: any,
+  //   @UploadedFile() og_featured_img?: File
+  // ) {
+  //   const user_id = req.user?.userId;
+  //   return this.articlesService.create(createArticleCMSDto, user_id, og_featured_img);
+  // }
 
   @Get("/all")
   findAll(@Query(ValidationPipe) filter: filterArticleDTO) {
