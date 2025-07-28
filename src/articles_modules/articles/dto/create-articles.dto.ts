@@ -80,15 +80,4 @@ export class CreateArticleDto {
   })
   status: StatusType;
 
-  @IsOptional()
-  @IsString()
-  og_title?: string;
-
-  @IsOptional()
-  @IsString()
-  og_description?: string;
-
-  @IsOptional()
-  @IsString()
-  og_featured_img?: string;
 }

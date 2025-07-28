@@ -46,7 +46,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 import { ExamDocumentModule } from "./helper_entities/exams-document/exams-document.module";
 import { CmsModule } from "./cms/cms.module";
-import { ScheduleModule } from '@nestjs/schedule';
+import { ScheduleModule } from "@nestjs/schedule";
 import { SitemapModule } from "./sitemaps/sitemap.module";
 import { AppDataSource } from "./data-source"; // Import DataSource
 import { FastifyMulterModule } from "@nest-lab/fastify-multer";
@@ -110,9 +110,9 @@ import { FastifyMulterModule } from "@nest-lab/fastify-multer";
     CollegeComparisionModule,
     ListingContentModule,
     ExamDocumentModule,
-    CmsModule,
+    // CmsModule,
     ScheduleModule.forRoot(),
-    SitemapModule
+    SitemapModule,
   ],
   controllers: [AppController],
   providers: [AppService],

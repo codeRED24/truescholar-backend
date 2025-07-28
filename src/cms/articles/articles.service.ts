@@ -24,176 +24,171 @@ export class ArticlesService {
     private readonly articleRepository: Repository<Article>
   ) {}
 
-  async create(
-    createArticleCMSDto: CreateArticleCMSDto,
-    user_id: number,
-    og_featured_img: File
-  ) {
-    return tryCatchWrapper(async () => {
-      let og_img = "";
+  // async create(
+  //   createArticleCMSDto: CreateArticleCMSDto,
+  //   user_id: number,
+  //   og_featured_img: File
+  // ) {
+  //   return tryCatchWrapper(async () => {
+  //     let og_img = "";
 
+  //     if (og_featured_img) {
+  //       og_img = await this.fileUploadService.uploadFile(
+  //         og_featured_img,
+  //         "article/featured-image"
+  //       );
+  //     }
 
-      if (og_featured_img) {
-        og_img = await this.fileUploadService.uploadFile(
-          og_featured_img,
-          "article/featured-image"
-        );
-      }
+  //     const isActiveValue =
+  //     typeof createArticleCMSDto.is_active === "boolean"
+  //         ? createArticleCMSDto.is_active
+  //         : createArticleCMSDto.is_active === "true" || createArticleCMSDto.is_active === true;
 
+  //     const parseIds = (value: any): number[] => {
+  //       if (!value) return [];
+  //       if (Array.isArray(value))
+  //         return value.map(Number).filter((v) => !isNaN(v));
+  //       if (typeof value === "string")
+  //         return value
+  //           .split(",")
+  //           .map((v) => Number(v.trim()))
+  //           .filter((v) => !isNaN(v));
+  //       return [Number(value)].filter((v) => !isNaN(v));
+  //     };
 
+  //     const courseIds = parseIds(createArticleCMSDto.course_id);
+  //     const examIds = parseIds(createArticleCMSDto.exam_id);
+  //     const collegeIds = parseIds(createArticleCMSDto.college_id);
+  //     const courseGroupIds = parseIds(createArticleCMSDto.course_group_id);
 
-      const isActiveValue =
-      typeof createArticleCMSDto.is_active === "boolean"
-          ? createArticleCMSDto.is_active
-          : createArticleCMSDto.is_active === "true" || createArticleCMSDto.is_active === true;
-      
+  //     // Create the article
+  //     const article = this.articleRepository.create({
+  //       ...createArticleCMSDto,
+  //       og_featured_img: og_img || null,
+  //       is_active: isActiveValue,
+  //     });
 
-      const parseIds = (value: any): number[] => {
-        if (!value) return [];
-        if (Array.isArray(value))
-          return value.map(Number).filter((v) => !isNaN(v));
-        if (typeof value === "string")
-          return value
-            .split(",")
-            .map((v) => Number(v.trim()))
-            .filter((v) => !isNaN(v));
-        return [Number(value)].filter((v) => !isNaN(v));
-      };
+  //     let result = await this.articleRepository.save(article);
 
-      const courseIds = parseIds(createArticleCMSDto.course_id);
-      const examIds = parseIds(createArticleCMSDto.exam_id);
-      const collegeIds = parseIds(createArticleCMSDto.college_id);
-      const courseGroupIds = parseIds(createArticleCMSDto.course_group_id);
+  //     if (result.slug && !result.slug.includes(`-${result.article_id}`)) {
+  //       result.slug = result.slug.replace("-undefined", "");
+  //       result.slug = `${result.slug}-${result.article_id}`;
+  //       result = await this.articleRepository.save(result);
+  //     }
 
-      // Create the article
-      const article = this.articleRepository.create({
-        ...createArticleCMSDto,
-        og_featured_img: og_img || null, 
-        is_active: isActiveValue,
-      });
+  //     const queryRunner =
+  //       this.articleRepository.manager.connection.createQueryRunner();
 
+  //     const validCourseIds = new Set(
+  //       courseIds.length
+  //         ? (
+  //             await queryRunner.query(
+  //               `SELECT course_id FROM courses WHERE course_id IN (${courseIds.join(",")})`
+  //             )
+  //           ).map((c) => c.course_id)
+  //         : []
+  //     );
 
-      let result = await this.articleRepository.save(article);
+  //     const validExamIds = new Set(
+  //       examIds.length
+  //         ? (
+  //             await queryRunner.query(
+  //               `SELECT exam_id FROM exam WHERE exam_id IN (${examIds.join(",")})`
+  //             )
+  //           ).map((e) => e.exam_id)
+  //         : []
+  //     );
 
-      if (result.slug && !result.slug.includes(`-${result.article_id}`)) {
-        result.slug = result.slug.replace("-undefined", "");
-        result.slug = `${result.slug}-${result.article_id}`;
-        result = await this.articleRepository.save(result);
-      }
+  //     const validCollegeIds = new Set(
+  //       collegeIds.length
+  //         ? (
+  //             await queryRunner.query(
+  //               `SELECT college_id FROM college_info WHERE college_id IN (${collegeIds.join(",")})`
+  //             )
+  //           ).map((c) => c.college_id)
+  //         : []
+  //     );
 
-      const queryRunner =
-        this.articleRepository.manager.connection.createQueryRunner();
+  //     const validCourseGroupIds = new Set(
+  //       courseGroupIds.length
+  //         ? (
+  //             await queryRunner.query(
+  //               `SELECT course_group_id FROM course_group WHERE course_group_id IN (${courseGroupIds.join(",")})`
+  //             )
+  //           ).map((cg) => cg.course_group_id)
+  //         : []
+  //     );
 
-      const validCourseIds = new Set(
-        courseIds.length
-          ? (
-              await queryRunner.query(
-                `SELECT course_id FROM courses WHERE course_id IN (${courseIds.join(",")})`
-              )
-            ).map((c) => c.course_id)
-          : []
-      );
+  //     const mappingsToInsert = [];
 
-      const validExamIds = new Set(
-        examIds.length
-          ? (
-              await queryRunner.query(
-                `SELECT exam_id FROM exam WHERE exam_id IN (${examIds.join(",")})`
-              )
-            ).map((e) => e.exam_id)
-          : []
-      );
+  //     courseIds.forEach((id) => {
+  //       if (validCourseIds.has(id)) {
+  //         mappingsToInsert.push(
+  //           `(${result.article_id}, '${ArticleTagType.COURSES}', ${id})`
+  //         );
+  //       }
+  //     });
 
-      const validCollegeIds = new Set(
-        collegeIds.length
-          ? (
-              await queryRunner.query(
-                `SELECT college_id FROM college_info WHERE college_id IN (${collegeIds.join(",")})`
-              )
-            ).map((c) => c.college_id)
-          : []
-      );
+  //     examIds.forEach((id) => {
+  //       if (validExamIds.has(id)) {
+  //         mappingsToInsert.push(
+  //           `(${result.article_id}, '${ArticleTagType.EXAMS}', ${id})`
+  //         );
+  //       }
+  //     });
 
-      const validCourseGroupIds = new Set(
-        courseGroupIds.length
-          ? (
-              await queryRunner.query(
-                `SELECT course_group_id FROM course_group WHERE course_group_id IN (${courseGroupIds.join(",")})`
-              )
-            ).map((cg) => cg.course_group_id)
-          : []
-      );
+  //     collegeIds.forEach((id) => {
+  //       if (validCollegeIds.has(id)) {
+  //         mappingsToInsert.push(
+  //           `(${result.article_id}, '${ArticleTagType.COLLEGE}', ${id})`
+  //         );
+  //       }
+  //     });
 
-      const mappingsToInsert = [];
+  //     courseGroupIds.forEach((id) => {
+  //       if (validCourseGroupIds.has(id)) {
+  //         mappingsToInsert.push(
+  //           `(${result.article_id}, '${ArticleTagType.COURSE_GROUP}', ${id})`
+  //         );
+  //       }
+  //     });
 
-      courseIds.forEach((id) => {
-        if (validCourseIds.has(id)) {
-          mappingsToInsert.push(
-            `(${result.article_id}, '${ArticleTagType.COURSES}', ${id})`
-          );
-        }
-      });
+  //     // Insert mappings in bulk using raw query
+  //     if (mappingsToInsert.length > 0) {
+  //       await queryRunner.query(`
+  //               INSERT INTO articles_mapping (article_id, tag_type, tag_type_id)
+  //               VALUES ${mappingsToInsert.join(",")}
+  //           `);
+  //     }
 
-      examIds.forEach((id) => {
-        if (validExamIds.has(id)) {
-          mappingsToInsert.push(
-            `(${result.article_id}, '${ArticleTagType.EXAMS}', ${id})`
-          );
-        }
-      });
+  //     // Log the operation
+  //     await this.logService.createLog(
+  //       user_id,
+  //       LogType.ARTICLE,
+  //       `Article created with ID ${result.article_id}`,
+  //       1,
+  //       RequestType.POST,
+  //       result.article_id,
+  //       { result, ...{ og_featured_img } }
+  //     );
 
-      collegeIds.forEach((id) => {
-        if (validCollegeIds.has(id)) {
-          mappingsToInsert.push(
-            `(${result.article_id}, '${ArticleTagType.COLLEGE}', ${id})`
-          );
-        }
-      });
-
-      courseGroupIds.forEach((id) => {
-        if (validCourseGroupIds.has(id)) {
-          mappingsToInsert.push(
-            `(${result.article_id}, '${ArticleTagType.COURSE_GROUP}', ${id})`
-          );
-        }
-      });
-
-      // Insert mappings in bulk using raw query
-      if (mappingsToInsert.length > 0) {
-        await queryRunner.query(`
-                INSERT INTO articles_mapping (article_id, tag_type, tag_type_id)
-                VALUES ${mappingsToInsert.join(",")}
-            `);
-      }
-
-      // Log the operation
-      await this.logService.createLog(
-        user_id,
-        LogType.ARTICLE,
-        `Article created with ID ${result.article_id}`,
-        1,
-        RequestType.POST,
-        result.article_id,
-        { result, ...{ og_featured_img } }
-      );
-
-      // Return the final response
-      return {
-        success: true,
-        message: "Successfully created new article",
-        article: {
-          article_id: result.article_id,
-          title: result.title,
-          slug: result.slug,
-          content: result.content,
-          course_id: [...validCourseIds],
-          exam_id: [...validExamIds],
-          college_id: [...validCollegeIds],
-          course_group_id: [...validCourseGroupIds],
-        },
-      };
-    });
-  }
+  //     // Return the final response
+  //     return {
+  //       success: true,
+  //       message: "Successfully created new article",
+  //       article: {
+  //         article_id: result.article_id,
+  //         title: result.title,
+  //         slug: result.slug,
+  //         content: result.content,
+  //         course_id: [...validCourseIds],
+  //         exam_id: [...validExamIds],
+  //         college_id: [...validCollegeIds],
+  //         course_group_id: [...validCourseGroupIds],
+  //       },
+  //     };
+  //   });
+  // }
 
   async getAll(filter: filterArticleDTO, page: number = 1, limit: number = 10) {
     const { title, author_name, is_active, status, article_id } = filter;
@@ -303,9 +298,9 @@ export class ArticlesService {
         LEFT JOIN courses co ON am.tag_type = 'course_id' AND am.tag_type_id = co.course_id
         WHERE a.article_id = $1;
       `;
-  
+
       const rows = await this.dataSource.query(query, [article_id]);
-  
+
       if (rows.length === 0) {
         return {
           success: false,
@@ -313,9 +308,9 @@ export class ArticlesService {
           data: {},
         };
       }
-  
-      const firstRow = rows[0]; 
-  
+
+      const firstRow = rows[0];
+
       const article = {
         article_id: firstRow.article_id,
         created_at: firstRow.created_at,
@@ -346,15 +341,15 @@ export class ArticlesService {
         course_groups_name: [],
         course_name: [],
       };
-  
+
       const addedIds = {
         colleges: new Set(),
         exams: new Set(),
         course_groups: new Set(),
         courses: new Set(),
       };
-  
-      rows.forEach(row => {
+
+      rows.forEach((row) => {
         if (row.college_id && !addedIds.colleges.has(row.college_id)) {
           article.college_name.push({
             value: row.college_id,
@@ -369,7 +364,10 @@ export class ArticlesService {
           });
           addedIds.exams.add(row.exam_id);
         }
-        if (row.course_group_id && !addedIds.course_groups.has(row.course_group_id)) {
+        if (
+          row.course_group_id &&
+          !addedIds.course_groups.has(row.course_group_id)
+        ) {
           article.course_groups_name.push({
             value: row.course_group_id,
             label: row.course_group_name,
@@ -384,7 +382,7 @@ export class ArticlesService {
           addedIds.courses.add(row.course_id);
         }
       });
-  
+
       return {
         success: true,
         message: "Article fetched successfully",
@@ -392,112 +390,129 @@ export class ArticlesService {
       };
     });
   }
-  
 
   async update(
     article_id: number,
     updateArticleCMSDto: UpdateArticleCMSDto,
     userId: number,
     og_featured_img: File
-) {
+  ) {
     return tryCatchWrapper(async () => {
-        const existingArticle = await this.dataSource.query(
-            `SELECT * FROM article WHERE article_id = $1`,
-            [article_id]
+      const existingArticle = await this.dataSource.query(
+        `SELECT * FROM article WHERE article_id = $1`,
+        [article_id]
+      );
+
+      if (!existingArticle.length) {
+        throw new BadRequestException(
+          `Invalid ${article_id} ID, Article not found.`
         );
+      }
 
-        if (!existingArticle.length) {
-            throw new BadRequestException(`Invalid ${article_id} ID, Article not found.`);
-        }
-
-        let og_image = existingArticle[0].og_featured_img;
-        if (og_featured_img) {
-            og_image = await this.fileUploadService.uploadFile(
-                og_featured_img,
-                `article/featured-image/${article_id}-${new Date().toISOString()}`
-            );
-        }
-
-        const { course_id, exam_id, college_id, course_group_id, ...articleFields } = updateArticleCMSDto;
-
-        const fieldsToUpdate = { 
-            ...articleFields,  
-            og_featured_img: og_image, 
-            updated_at: new Date()
-        };
-
-        // Remove undefined fields
-        Object.keys(fieldsToUpdate).forEach((key) => {
-            if (fieldsToUpdate[key] === undefined) delete fieldsToUpdate[key];
-        });
-
-        await this.dataSource.query(
-            `UPDATE article SET ${Object.keys(fieldsToUpdate)
-                .map((key, index) => `${key} = $${index + 1}`)
-                .join(", ")
-            } WHERE article_id = $${Object.values(fieldsToUpdate).length + 1}`,
-            [...Object.values(fieldsToUpdate), article_id]
+      let og_image = existingArticle[0].og_featured_img;
+      if (og_featured_img) {
+        og_image = await this.fileUploadService.uploadFile(
+          og_featured_img,
+          `article/featured-image/${article_id}-${new Date().toISOString()}`
         );
+      }
 
-        // **DELETE all previous mappings**
-        await this.dataSource.query(
-            `DELETE FROM articles_mapping WHERE article_id = $1`,
-            [article_id]
-        );
+      const {
+        course_id,
+        exam_id,
+        college_id,
+        course_group_id,
+        ...articleFields
+      } = updateArticleCMSDto;
 
-        const parseIds = (value: any) => {
-          if (!value) return [];  
-          if (typeof value === "string") {
-            return value.split(",").map((number) => +number);
-          }
-          return [];
+      const fieldsToUpdate = {
+        ...articleFields,
+        og_featured_img: og_image,
+        updated_at: new Date(),
       };
-      
-        const tagUpdates = {
-            [ArticleTagType.COURSES]: parseIds(updateArticleCMSDto.course_id),
-            [ArticleTagType.EXAMS]: parseIds(updateArticleCMSDto.exam_id),
-            [ArticleTagType.COLLEGE]: parseIds(updateArticleCMSDto.college_id),
-            [ArticleTagType.COURSE_GROUP]: parseIds(updateArticleCMSDto.course_group_id),
-        };
-        console.log("Heman", tagUpdates)
 
-        const mappingsToInsert = [];
-        Object.entries(tagUpdates).forEach(([tagType, ids]) => {
-            ids.forEach((id) => {
-                mappingsToInsert.push({ article_id, tag_type: tagType, tag_type_id: id });
-            });
-        });
+      // Remove undefined fields
+      Object.keys(fieldsToUpdate).forEach((key) => {
+        if (fieldsToUpdate[key] === undefined) delete fieldsToUpdate[key];
+      });
 
-        // **INSERT new mappings**
-        if (mappingsToInsert.length) {
-            const valuesString = mappingsToInsert.map((_, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`).join(", ");
-            const flattenedValues = mappingsToInsert.flatMap((m) => [m.article_id, m.tag_type, m.tag_type_id]);
-            await this.dataSource.query(
-                `INSERT INTO articles_mapping (article_id, tag_type, tag_type_id) VALUES ${valuesString}`,
-                flattenedValues
-            );
+      await this.dataSource.query(
+        `UPDATE article SET ${Object.keys(fieldsToUpdate)
+          .map((key, index) => `${key} = $${index + 1}`)
+          .join(
+            ", "
+          )} WHERE article_id = $${Object.values(fieldsToUpdate).length + 1}`,
+        [...Object.values(fieldsToUpdate), article_id]
+      );
+
+      // **DELETE all previous mappings**
+      await this.dataSource.query(
+        `DELETE FROM articles_mapping WHERE article_id = $1`,
+        [article_id]
+      );
+
+      const parseIds = (value: any) => {
+        if (!value) return [];
+        if (typeof value === "string") {
+          return value.split(",").map((number) => +number);
         }
+        return [];
+      };
 
-        await this.logService.createLog(
-            userId,
-            LogType.ARTICLE,
-            `Article updated successfully by user with ID ${userId}`,
-            1,
-            RequestType.PUT,
+      const tagUpdates = {
+        [ArticleTagType.COURSES]: parseIds(updateArticleCMSDto.course_id),
+        [ArticleTagType.EXAMS]: parseIds(updateArticleCMSDto.exam_id),
+        [ArticleTagType.COLLEGE]: parseIds(updateArticleCMSDto.college_id),
+        [ArticleTagType.COURSE_GROUP]: parseIds(
+          updateArticleCMSDto.course_group_id
+        ),
+      };
+      console.log("Heman", tagUpdates);
+
+      const mappingsToInsert = [];
+      Object.entries(tagUpdates).forEach(([tagType, ids]) => {
+        ids.forEach((id) => {
+          mappingsToInsert.push({
             article_id,
-            fieldsToUpdate
+            tag_type: tagType,
+            tag_type_id: id,
+          });
+        });
+      });
+
+      // **INSERT new mappings**
+      if (mappingsToInsert.length) {
+        const valuesString = mappingsToInsert
+          .map((_, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`)
+          .join(", ");
+        const flattenedValues = mappingsToInsert.flatMap((m) => [
+          m.article_id,
+          m.tag_type,
+          m.tag_type_id,
+        ]);
+        await this.dataSource.query(
+          `INSERT INTO articles_mapping (article_id, tag_type, tag_type_id) VALUES ${valuesString}`,
+          flattenedValues
         );
+      }
 
-        return {
-            success: true,
-            message: "Article updated successfully",
-            updatedFields: fieldsToUpdate,
-        };
+      await this.logService.createLog(
+        userId,
+        LogType.ARTICLE,
+        `Article updated successfully by user with ID ${userId}`,
+        1,
+        RequestType.PUT,
+        article_id,
+        fieldsToUpdate
+      );
+
+      return {
+        success: true,
+        message: "Article updated successfully",
+        updatedFields: fieldsToUpdate,
+      };
     });
-}
-
-
-  
+  }
 
   async remove(article_id: number, userId: number) {
     return tryCatchWrapper(async () => {

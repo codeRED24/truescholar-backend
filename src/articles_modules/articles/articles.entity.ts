@@ -80,15 +80,6 @@ export class Article {
   @Column({ type: "enum", enum: StatusType, default: StatusType.PENDING })
   status: StatusType;
 
-  @Column({ nullable: true, type: "varchar" })
-  og_title?: string;
-
-  @Column({ nullable: true, type: "varchar" })
-  og_description?: string;
-
-  @Column({ nullable: true, type: "varchar" })
-  og_featured_img?: string;
-
   // Many-to-One relationship with CollegeInfo
   @ManyToOne(() => Author, (collegeInfo) => collegeInfo.articles, {
     nullable: false,
@@ -97,6 +88,8 @@ export class Article {
   @JoinColumn({ name: "author_id" })
   author: Author;
 
-  @OneToMany(() => ArticleMapping, (mapping) => mapping.article_id, { cascade: true })
-        mappings_id: ArticleMapping[];
+  @OneToMany(() => ArticleMapping, (mapping) => mapping.article_id, {
+    cascade: true,
+  })
+  mappings_id: ArticleMapping[];
 }

@@ -67,39 +67,42 @@ export class ArticlesService {
   //   return this.articlesRepository.find();
   // }
 
-  async findAll(author_id?: number, page: number = 1, limit: number = 16, tag?: string): Promise<any> {
+  async findAll(
+    author_id?: number,
+    page: number = 1,
+    limit: number = 16,
+    tag?: string
+  ): Promise<any> {
     const whereCondition: any = {
       ...(author_id ? { author_id } : {}),
     };
-  
-    
+
     if (tag) {
-      whereCondition.tags = tag;  
+      whereCondition.tags = tag;
     }
-  
-   
-    limit = Math.max(1, limit); 
+
+    limit = Math.max(1, limit);
     const skip = (page - 1) * limit;
-  
+
     const [articles, total] = await this.articlesRepository.findAndCount({
       where: whereCondition,
-      take: limit,           
-      skip: skip,           
+      take: limit,
+      skip: skip,
       select: [
-        'article_id',
-        'created_at',
-        'updated_at',
-        'title',
-        'slug',
-        'read_time',
-        'publication_date',
-        'type',
-        'tags',
-        'img1_url',
-      ], // 
+        "article_id",
+        "created_at",
+        "updated_at",
+        "title",
+        "slug",
+        "read_time",
+        "publication_date",
+        "type",
+        "tags",
+        "img1_url",
+      ], //
       order: { updated_at: "DESC" },
     });
-  
+
     return {
       data: articles,
       totalItems: total,
@@ -108,28 +111,25 @@ export class ArticlesService {
       pageSize: limit,
     };
   }
-  
-  
-  
-  
+
   // Get Article by ID
   async findOne(id: number): Promise<Article> {
     const article = await this.articlesRepository
       .createQueryBuilder("article")
-      .leftJoinAndSelect("article.author", "author") 
+      .leftJoinAndSelect("article.author", "author")
       .addSelect([
         "author.author_id",
         "author.author_name",
         "author.view_name",
         "author.image",
-      ]) 
+      ])
       .where("article.article_id = :id", { id })
       .getOne();
-  
+
     if (!article) {
       throw new NotFoundException(`Article with ID ${id} not found`);
     }
-  
+
     return article;
   }
 
@@ -178,7 +178,7 @@ export class ArticlesService {
       const articles = await this.articlesRepository.find({
         order: { updated_at: "DESC" },
       });
-        const collegeContent = await this.collegeContentRepository
+      const collegeContent = await this.collegeContentRepository
         .createQueryBuilder("college_content")
         .where("college_content.silos = :silos", { silos: "news" })
         .select([

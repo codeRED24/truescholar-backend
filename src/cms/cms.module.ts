@@ -20,12 +20,12 @@ import { CmsCourseModule } from "./course/course.module";
     CmsExamModule,
     CmsCollegeModule,
     LogsModule,
-    ArticlesModule,
+    // ArticlesModule,
     CmsAuthorsModule,
     CmsBulkUploadSeoModule,
     CmsCollegeExamMappingModule,
     CmsTemplatizationModule,
-    CmsCourseModule
+    CmsCourseModule,
   ],
 })
 export class CmsModule {}
