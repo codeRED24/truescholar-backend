@@ -59,8 +59,7 @@ export class SitemapController {
     @Res() res: Response
   ): Promise<void> {
     try {
-      const sitemapIndex = 
-      parseInt(index, 10); // Convert the string index to a number
+      const sitemapIndex = parseInt(index, 10); // Convert the string index to a number
       const sitemap =
         await this.sitemapService.generateArticleSitemaps(sitemapIndex);
 
@@ -78,8 +77,7 @@ export class SitemapController {
     @Res() res: Response
   ): Promise<void> {
     try {
-      const sitemapIndex = 
-      parseInt(index, 10); // Convert the string index to a number
+      const sitemapIndex = parseInt(index, 10); // Convert the string index to a number
       const sitemap =
         await this.sitemapService.generateNewsSitemaps(sitemapIndex);
 
@@ -98,13 +96,13 @@ export class SitemapController {
     @Res() res: Response
   ): Promise<void> {
     try {
-      console.log(`Silos: ${silos}, Index: ${index}`); // Debugging the parameters
+      // console.log(`Silos: ${silos}, Index: ${index}`); // Debugging the parameters
       const sitemapIndex = parseInt(index, 10); // Convert the string index to a number
       const sitemap = await this.sitemapService.generateCollegeContentSitemaps(
         sitemapIndex,
         silos
       );
-  
+
       res.header("Content-Type", "application/xml");
       res.send(sitemap);
     } catch (err) {
@@ -114,25 +112,24 @@ export class SitemapController {
   }
 
   @Get("sitemap-exam-:silos-:index.xml")
-async getExamContentSitemap(
-  @Param("silos") silos: string,
-  @Param("index") index: string,
-  @Res() res: Response
-): Promise<void> {
-  try {
-    console.log(`Silos: ${silos}, Index: ${index}`); // Debugging the parameters
-    const sitemapIndex = parseInt(index, 10); // Convert the string index to a number
-    const sitemap = await this.sitemapService.generateExamContentSitemaps(
-      sitemapIndex,
-      silos
-    );
+  async getExamContentSitemap(
+    @Param("silos") silos: string,
+    @Param("index") index: string,
+    @Res() res: Response
+  ): Promise<void> {
+    try {
+      console.log(`Silos: ${silos}, Index: ${index}`); // Debugging the parameters
+      const sitemapIndex = parseInt(index, 10); // Convert the string index to a number
+      const sitemap = await this.sitemapService.generateExamContentSitemaps(
+        sitemapIndex,
+        silos
+      );
 
-    res.header("Content-Type", "application/xml");
-    res.send(sitemap);
-  } catch (err) {
-    console.error("Error generating exam sitemap:", err);
-    res.status(500).send("Error generating exam sitemap");
+      res.header("Content-Type", "application/xml");
+      res.send(sitemap);
+    } catch (err) {
+      console.error("Error generating exam sitemap:", err);
+      res.status(500).send("Error generating exam sitemap");
+    }
   }
-}
-
 }
