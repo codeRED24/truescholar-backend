@@ -1,3 +1,5 @@
+import { CollegeSearchModule } from "./college/college-search/college-search.module";
+import { CompareModule } from "./college/compare/compare.module";
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AppController } from "./app.controller";
@@ -53,6 +55,8 @@ import { FastifyMulterModule } from "@nest-lab/fastify-multer";
 
 @Module({
   imports: [
+    CollegeSearchModule,
+    CompareModule,
     TypeOrmModule.forRoot(AppDataSource.options), // Use DataSource options
     TypeOrmModule.forRoot({
       type: "postgres",

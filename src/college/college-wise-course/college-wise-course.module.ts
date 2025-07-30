@@ -13,7 +13,6 @@ import { CollegeWisePlacement } from "../college-wise-placement/college-wise-pla
 import { CollegeCutoff } from "../college-cutoff/college_cutoff.entity";
 import { Specialization } from "../../specializations/specialization/specialization.entity";
 import { Stream } from "../../helper_entities/stream/stream.entity";
-import { Author } from "../../articles_modules/author/author.entity";
 import { CollegeDates } from "../college-dates/college-dates.entity";
 @Module({
   imports: [
@@ -23,17 +22,17 @@ import { CollegeDates } from "../college-dates/college-dates.entity";
       Course,
       CourseGroup,
       CollegeRanking,
-      CollegeWiseFees, 
-      RankingAgency, 
-      CollegeWisePlacement, 
+      CollegeWiseFees,
+      RankingAgency,
+      CollegeWisePlacement,
       CollegeCutoff,
       Specialization,
       Stream,
-      Author,
-      CollegeDates
+      CollegeDates,
     ]),
   ],
   controllers: [CollegeWiseCourseController],
   providers: [CollegeWiseCourseService],
+  exports: [CollegeWiseCourseService],
 })
 export class CollegeWiseCourseModule {}

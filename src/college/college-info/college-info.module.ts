@@ -43,9 +43,9 @@ import { CollegeCutoff } from "../college-cutoff/college_cutoff.entity";
       RankingAgency,
       CourseGroup,
       CollegeExam,
-      CollegeDates, 
+      CollegeDates,
       CollegeHostelCampus,
-      CollegeCutoff
+      CollegeCutoff,
     ]),
     AuthModule,
     ConfigModule,
@@ -63,10 +63,10 @@ import { CollegeCutoff } from "../college-cutoff/college_cutoff.entity";
   ],
   controllers: [CollegeInfoController],
   providers: [CollegeInfoService],
+  exports: [CollegeInfoService],
 })
 export class CollegeInfoModule implements OnModuleInit {
   constructor(private readonly collegeInfoService: CollegeInfoService) {}
 
-  async onModuleInit() {
-  }
+  async onModuleInit() {}
 }

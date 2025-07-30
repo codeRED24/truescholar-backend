@@ -11,7 +11,7 @@ import {
   UseGuards,
   ParseIntPipe,
   BadRequestException,
-  Put
+  Put,
 } from "@nestjs/common";
 import { CollegeWiseCourseService } from "./college-wise-course.service";
 import { CreateCollegeWiseCourseDto } from "./dto/create-college_wise_course.dto";
@@ -130,56 +130,65 @@ export class CollegeWiseCourseController {
   }
 
   @Get("course-details/:id")
-@ApiOperation({ summary: "Get detailed course information by ID" })
-@ApiResponse({ status: 200, description: "Course details fetched successfully." })
-@ApiResponse({ status: 404, description: "Course or related data not found." })
-async getCourseDetails(@Param("id", ParseIntPipe) id: number) {
-  return this.collegeWiseCourseService.getCourseDetails(id);
-}
-
-@Get("details")
-@ApiOperation({ summary: "Get detailed college-wise course information" })
-@ApiResponse({
-  status: 200,
-  description: "Detailed college-wise course information with filters.",
-})
-findAllWithDetails() {
-  return this.collegeWiseCourseService.findAllWithDetails();
-}
-
-@Post("add")
-async add(@Body() dto: CreateCollegeWiseCoursesDto) {
-  return this.collegeWiseCourseService.createCollegeWiseCourse(dto);
-}
-
-@Get("/courses/:college_id")
-@ApiOperation({ summary: "Get paginated list of courses with details" })
-async getCourses(
-  @Query("page") page: number = 1,
-  @Query("limit") limit: number = 10,
-  @Param("college_id") college_id: number
-) {
-  return this.collegeWiseCourseService.getCoursesWithDetails(page, limit,college_id);
-}
-
-
-@Get("/singleCourse/:course_id")
-async getSingleCourseDetails(@Param("course_id") course_id: number) {
-  return this.collegeWiseCourseService.findCourseDetails(course_id);
-}
-
-@Put("/updateCourse/:course_id")
-async updateCourseDetails(
-  @Param("course_id") course_id: string,
-  @Body() updateSingleCourseDto: UpdateSingleCourseDto
-) {
-  const courseIdNum = Number(course_id);
-  if (isNaN(courseIdNum)) {
-    throw new BadRequestException("Invalid course ID");
+  @ApiOperation({ summary: "Get detailed course information by ID" })
+  @ApiResponse({
+    status: 200,
+    description: "Course details fetched successfully.",
+  })
+  @ApiResponse({
+    status: 404,
+    description: "Course or related data not found.",
+  })
+  async getCourseDetails(@Param("id", ParseIntPipe) id: number) {
+    return this.collegeWiseCourseService.getCourseDetails(id);
   }
-  return this.collegeWiseCourseService.updateCourseDetails(courseIdNum, updateSingleCourseDto);
-}
 
+  @Get("details")
+  @ApiOperation({ summary: "Get detailed college-wise course information" })
+  @ApiResponse({
+    status: 200,
+    description: "Detailed college-wise course information with filters.",
+  })
+  findAllWithDetails() {
+    return this.collegeWiseCourseService.findAllWithDetails();
+  }
 
+  @Post("add")
+  async add(@Body() dto: CreateCollegeWiseCoursesDto) {
+    return this.collegeWiseCourseService.createCollegeWiseCourse(dto);
+  }
 
+  @Get("/courses/:college_id")
+  @ApiOperation({ summary: "Get paginated list of courses with details" })
+  async getCourses(
+    @Query("page") page: number = 1,
+    @Query("limit") limit: number = 10,
+    @Param("college_id") college_id: number
+  ) {
+    return this.collegeWiseCourseService.getCoursesWithDetails(
+      page,
+      limit,
+      college_id
+    );
+  }
+
+  @Get("/singleCourse/:course_id")
+  async getSingleCourseDetails(@Param("course_id") course_id: number) {
+    return this.collegeWiseCourseService.findCourseDetails(course_id);
+  }
+
+  @Put("/updateCourse/:course_id")
+  async updateCourseDetails(
+    @Param("course_id") course_id: string,
+    @Body() updateSingleCourseDto: UpdateSingleCourseDto
+  ) {
+    const courseIdNum = Number(course_id);
+    if (isNaN(courseIdNum)) {
+      throw new BadRequestException("Invalid course ID");
+    }
+    return this.collegeWiseCourseService.updateCourseDetails(
+      courseIdNum,
+      updateSingleCourseDto
+    );
+  }
 }
