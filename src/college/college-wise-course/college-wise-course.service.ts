@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { Not, Repository } from "typeorm";
 import { CreateCollegeWiseCourseDto } from "./dto/create-college_wise_course.dto";
 import { UpdateCollegeWiseCourseDto } from "./dto/update-college_wise_course.dto";
 import { CollegeWiseCourse } from "./college_wise_course.entity";
@@ -42,8 +42,6 @@ export class CollegeWiseCourseService {
     private readonly courseGroupRepository: Repository<CourseGroup>,
     @InjectRepository(Stream)
     private readonly streamRepository: Repository<Stream>,
-    @InjectRepository(Author)
-    private readonly authorRepository: Repository<Author>,
     @InjectRepository(CollegeRanking)
     private readonly collegeRankingRepository: Repository<CollegeRanking>,
     @InjectRepository(CollegeWiseFees)
@@ -174,6 +172,82 @@ export class CollegeWiseCourseService {
     }
 
     return results;
+  }
+
+  // Returns basic college info and minimal data of college's courses
+  async getCollegeBasicWithCourses(collegeId: number, course_id: number) {
+    // Fetch basic college info
+    const college = await this.collegeInfoRepository.findOne({
+      where: { college_id: collegeId, is_active: Not(false) },
+      select: [
+        "college_id",
+        "college_name",
+        "slug",
+        "is_online",
+        "type_of_institute",
+        "founded_year",
+        "total_student",
+        "campus_size",
+      ],
+    });
+    if (!college) {
+      throw new NotFoundException(`College with ID ${collegeId} not found`);
+    }
+
+    let CollegesCourses;
+
+    if (course_id) {
+      CollegesCourses = await this.collegeWiseCourseRepository.find({
+        where: [
+          {
+            college_wise_course_id: course_id,
+            college_id: collegeId,
+          },
+        ],
+        select: [
+          "college_wise_course_id",
+          "name",
+          "course_id",
+          "degree_type",
+          "level",
+          "duration",
+          "eligibility",
+          "is_online",
+          "level",
+          "course_format",
+          "duration_type",
+        ],
+      });
+    }
+
+    if (!course_id) {
+      CollegesCourses = await this.collegeWiseCourseRepository.find({
+        where: [{ college_id: collegeId }],
+        select: [
+          "college_wise_course_id",
+          "name",
+          "course_id",
+          "degree_type",
+          "level",
+          "duration",
+          "eligibility",
+          "is_online",
+          "level",
+          "course_format",
+          "duration_type",
+        ],
+      });
+    }
+
+    return {
+      success: true,
+      data: {
+        college: {
+          ...college,
+          CollegesCourses,
+        },
+      },
+    };
   }
 
   //bulk create
@@ -565,10 +639,6 @@ export class CollegeWiseCourseService {
       where: { stream_id },
     });
 
-    const author = await this.authorRepository.findOne({
-      where: { author_id: courseDetails.author_id },
-    });
-
     const collegeFees = await this.collegeWiseFeesRepository.findOne({
       where: { college_id: courseDetails.college_id },
     });
@@ -577,7 +647,6 @@ export class CollegeWiseCourseService {
       short_name: course.short_name,
       course_type: course.course_type,
       is_active: courseDetails.is_active ?? null,
-      is_discontinued: courseDetails.is_discontinued ?? null,
       course_group_name: courseGroup.full_name ?? "",
       level: courseDetails.level ?? null,
       duration: courseDetails.duration ?? null,
@@ -585,19 +654,10 @@ export class CollegeWiseCourseService {
       eligibility: courseDetails.eligibility ?? null,
       kapp_rating: courseDetails.kapp_rating ?? null,
       refrence_url: courseDetails.refrence_url ?? null,
-      display_name: courseDetails.display_name ?? null,
-      average_salary: courseDetails.average_salary ?? null,
-      median_salary: courseDetails.median_salary ?? null,
-      top_recruiters: courseDetails.top_recruiters ?? null,
-      highest_salary: courseDetails.highest_salary ?? null,
-      title: courseDetails.title ?? null,
       description: courseDetails.description ?? null,
-      meta_desc: courseDetails.meta_desc ?? null,
-      seo_params: courseDetails.seo_params ?? null,
       course_group: courseGroup ? courseGroup.name : null,
       specialization: specialization ? specialization.full_name : null,
       stream_name: stream ? stream.stream_name : null,
-      author_name: author ? author.author_name : null,
       fees: collegeFees
         ? {
             // tution_fees: collegeFees.tution_fees_max_amount ?? null,

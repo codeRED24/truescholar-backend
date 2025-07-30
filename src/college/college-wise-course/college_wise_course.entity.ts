@@ -98,7 +98,7 @@ export class CollegeWiseCourse {
   @Column({ type: "int", nullable: false })
   college_id: number;
 
-  @Column({type: "int", nullable: true})
+  @Column({ type: "int", nullable: true })
   stage_id?: number;
 
   @Column({ type: "int", nullable: true })
@@ -112,42 +112,6 @@ export class CollegeWiseCourse {
 
   @Column({ type: "varchar", length: 500, nullable: true })
   refrence_url?: string;
-  
-
-
-
-  @Column({ type: "varchar", length: 500, nullable: true })
-  display_name?: string;
-
-  @Column({ type: "int", nullable: true })
-  author_id?: number; 
-  
-
-  @Column({ type: "varchar", length: 500, nullable: true })
-  title?: string;
-
-  @Column({ type: "varchar", length: 500, nullable: true })
-  meta_desc?: string;
-
-  @Column({ type: "varchar", length: 500, nullable: true })
-  seo_params?: string;
-
-  @Column({ type: "boolean",nullable: true })
-  is_discontinued?: boolean;
-
-  @Column({ type: "int",  nullable: true })
-  average_salary?: number;
-
-  @Column({ type: "int",  nullable: true })
-  median_salary?: number;
-
-  
-  @Column({ type: "int",  nullable: true })
-  highest_salary?: number;
-
-
-  @Column({ type: "varchar", length: 500, nullable: true })
-  top_recruiters?: string;
 
   @ManyToOne(
     () => CourseGroup,
@@ -182,12 +146,4 @@ export class CollegeWiseCourse {
 
   @OneToMany(() => CollegeCutoff, (cutoff) => cutoff.collegeWiseCourse)
   collegeCutoffs: CollegeCutoff[];
-
-  @ManyToOne(() => Author, {
-    nullable: true,
-    onDelete: "SET NULL",
-  })
-  @JoinColumn({ name: "author_id" })
-  author: Author;
-  
 }

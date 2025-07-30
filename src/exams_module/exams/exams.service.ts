@@ -272,18 +272,18 @@ export class ExamsService {
       //   [exam_id]
       // );
 
-      console.log({
-        examInformation: exam[0],
-        examContent: latestContent.length > 0 ? latestContent[0] : null,
-        distinctSilos: [
-          ...distinctSilos,
-          // ...(isQuestionPepersExists && isQuestionPepersExists.length
-          //   ? [{ silos: "question_papers" }]
-          //   : []),
-        ],
-        ...(examDates && { examDates }),
-        ...(questionPapers && { questionPapers }),
-      });
+      // console.log({
+      //   examInformation: exam[0],
+      //   examContent: latestContent.length > 0 ? latestContent[0] : null,
+      //   distinctSilos: [
+      //     ...distinctSilos,
+      //     // ...(isQuestionPepersExists && isQuestionPepersExists.length
+      //     //   ? [{ silos: "question_papers" }]
+      //     //   : []),
+      //   ],
+      //   ...(examDates && { examDates }),
+      //   ...(questionPapers && { questionPapers }),
+      // });
 
       return {
         examInformation: exam[0],

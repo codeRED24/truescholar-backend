@@ -14,22 +14,6 @@ export class UpdateSingleCourseDto {
   is_active?: boolean;
 
   @IsOptional()
-  @IsBoolean()
-  is_discontinued?: boolean;
-
-  @IsOptional()
-  @IsNumber()
-  average_salary?: number;
-
-  @IsOptional()
-  @IsNumber()
-  median_salary?: number;
-
-  @IsOptional()
-  @IsNumber()
-  highest_salary?: number;
-
-  @IsOptional()
   @IsString()
   top_recruiters?: string;
 

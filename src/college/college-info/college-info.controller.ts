@@ -95,17 +95,17 @@ export class CollegeInfoController {
     @Query("page") page: number = 1,
     @Query("limit") limit: number = 51000
   ): Promise<CollegeListingResponseDto> {
-    console.log({
-      city_name,
-      state_name,
-      // country_id,
-      type_of_institute,
-      stream_name,
-      fee_range,
-      is_active,
-      page,
-      limit,
-    });
+    // console.log({
+    //   city_name,
+    //   state_name,
+    //   // country_id,
+    //   type_of_institute,
+    //   stream_name,
+    //   fee_range,
+    //   is_active,
+    //   page,
+    //   limit,
+    // });
     const citiesArray = city_name
       ? city_name.split(",").map((s) => s.trim())
       : undefined;
@@ -122,13 +122,13 @@ export class CollegeInfoController {
       ? fee_range.split(",").map((s) => s.trim())
       : undefined;
 
-    console.log({
-      citiesArray,
-      statesArray,
-      streamsArray,
-      typeOfInstituteArray,
-      feeRangeArray,
-    });
+    // console.log({
+    //   citiesArray,
+    //   statesArray,
+    //   streamsArray,
+    //   typeOfInstituteArray,
+    //   feeRangeArray,
+    // });
     return this.collegeInfoService.findAll(
       college_name,
       citiesArray,
