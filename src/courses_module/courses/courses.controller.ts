@@ -9,7 +9,7 @@ import {
   Query,
   UseGuards,
   ValidationPipe,
-  BadRequestException
+  BadRequestException,
 } from "@nestjs/common";
 import { CourseService } from "./courses.service";
 import { CreateCourseDto } from "./dto/create-courses.dto";
@@ -52,11 +52,9 @@ export class CourseController {
   ) {
     page = Number(page);
     limit = Number(limit);
-  
+
     return this.courseService.getAllCourses(page, limit, search);
   }
-  
-
 
   @Get(":id")
   @ApiOperation({ summary: "Get a course by ID" })
@@ -101,36 +99,27 @@ export class CourseController {
     return this.courseService.createBulk(createCourseDtos);
   }
 
-
   @Get("/silos/:slug/:silo_name")
-getCourseContentBySilo(
-  @Param("slug") slug: string,
-  @Param("silo_name") silo_name: string
-) {
-  return this.courseService.getCourseContentBySilo(slug, silo_name);
-}
-
-  
-
-@Get("/:course_id/info")
-async getInfoWithSilos(@Param("course_id") course_id: string) {
-  const parseId = parseInt(course_id);
-
-  console.log("Parsed Course ID:", parseId, "Original Type:", typeof parseId);
-
-  if (isNaN(parseId)) {
-    throw new BadRequestException("Invalid course ID format");
+  getCourseContentBySilo(
+    @Param("slug") slug: string,
+    @Param("silo_name") silo_name: string
+  ) {
+    return this.courseService.getCourseContentBySilo(slug, silo_name);
   }
 
-  return this.courseService.getInfoWithSilos(parseId);
-}
+  @Get("/:course_id/info")
+  async getInfoWithSilos(@Param("course_id") course_id: string) {
+    const parseId = parseInt(course_id);
 
-@Get("content/:slug/overview")   
-async getInfoBySlug(@Param("slug") slug: string) {
-  return this.courseService.getInfoBySlug(slug);
-}
+    if (isNaN(parseId)) {
+      throw new BadRequestException("Invalid course ID format");
+    }
 
+    return this.courseService.getInfoWithSilos(parseId);
+  }
 
-
-
+  @Get("content/:slug/overview")
+  async getInfoBySlug(@Param("slug") slug: string) {
+    return this.courseService.getInfoBySlug(slug);
+  }
 }
