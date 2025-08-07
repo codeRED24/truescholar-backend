@@ -195,48 +195,68 @@ export class CollegeWiseCourseService {
     }
 
     let CollegesCourses;
+    let coursesCount = 0;
 
     if (course_id) {
-      CollegesCourses = await this.collegeWiseCourseRepository.find({
-        where: [
-          {
-            college_wise_course_id: course_id,
-            college_id: collegeId,
-          },
-        ],
-        select: [
-          "college_wise_course_id",
-          "name",
-          "course_id",
-          "degree_type",
-          "level",
-          "duration",
-          "eligibility",
-          "is_online",
-          "level",
-          "course_format",
-          "duration_type",
-        ],
-      });
-    }
-
-    if (!course_id) {
-      CollegesCourses = await this.collegeWiseCourseRepository.find({
-        where: [{ college_id: collegeId }],
-        select: [
-          "college_wise_course_id",
-          "name",
-          "course_id",
-          "degree_type",
-          "level",
-          "duration",
-          "eligibility",
-          "is_online",
-          "level",
-          "course_format",
-          "duration_type",
-        ],
-      });
+      // Fetch the filtered courses and total count in parallel
+      const [courses, count] = await Promise.all([
+        this.collegeWiseCourseRepository.find({
+          where: [
+            {
+              college_wise_course_id: course_id,
+              college_id: collegeId,
+            },
+          ],
+          select: [
+            "college_wise_course_id",
+            "name",
+            "course_id",
+            "degree_type",
+            "level",
+            "duration",
+            "eligibility",
+            "is_online",
+            "level",
+            "course_format",
+            "duration_type",
+            "fees",
+            "salary",
+            "course_brochure",
+            "syllabus",
+            "total_seats",
+          ],
+        }),
+        this.collegeWiseCourseRepository.count({
+          where: { college_id: collegeId },
+        }),
+      ]);
+      CollegesCourses = courses;
+      coursesCount = count;
+    } else {
+      // Fetch all courses and count in parallel
+      const [courses, count] = await Promise.all([
+        this.collegeWiseCourseRepository.find({
+          where: [{ college_id: collegeId }],
+          select: [
+            "college_wise_course_id",
+            "name",
+            // "course_id",
+            // "degree_type",
+            // "level",
+            // "duration",
+            // "eligibility",
+            // "is_online",
+            // "level",
+            // "course_format",
+            // "duration_type",
+          ],
+        }),
+        this.collegeWiseCourseRepository.count({
+          where: { college_id: collegeId },
+        }),
+      ]);
+      CollegesCourses = courses;
+      coursesCount = count;
     }
 
     return {
@@ -245,6 +265,7 @@ export class CollegeWiseCourseService {
         college: {
           ...college,
           CollegesCourses,
+          coursesCount,
         },
       },
     };
