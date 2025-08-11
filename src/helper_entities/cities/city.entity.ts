@@ -30,6 +30,9 @@ export class City {
   @Column({ type: "varchar", length: 300 })
   name: string;
 
+  @Column("text", { nullable: true })
+  description: string;
+
   @Column({ type: "varchar", length: 100, nullable: false })
   slug: string;
 
