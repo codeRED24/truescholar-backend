@@ -53,6 +53,7 @@ import { CollegeContent } from "../college-content/college-content.entity";
 import { DataSource } from "typeorm";
 import { tryCatchWrapper } from "../../config/application.errorHandeler";
 import { mapContentBySilos } from "./college-info.helper";
+import { ILike } from "typeorm";
 
 @Injectable()
 export class CollegeInfoService {
@@ -176,17 +177,6 @@ export class CollegeInfoService {
     limit: number = 51000
   ): Promise<CollegeListingResponseDto> {
     const offset = (page - 1) * limit;
-
-    // console.log({
-    //   college_name,
-    //   city_name,
-    //   state_name,
-    //   type_of_institute,
-    //   stream_name,
-    //   is_active,
-    //   page,
-    //   limit,
-    // });
 
     // Helper function to apply common filters
     const applyFilters = (queryBuilder: any) => {
@@ -574,10 +564,54 @@ export class CollegeInfoService {
       specializationMap
     );
 
+    // After building the filter section, determine the selected description
+    let selectedDescription = null;
+
+    // Check in priority order: stream > city > state
+    if (stream_name && stream_name.length > 0) {
+      // Find the first stream in the filter that has a description
+      const selectedStream = await this.streamRepository.findOne({
+        where: {
+          stream_name: ILike(`%${stream_name[0]}%`),
+        },
+        select: ["description"],
+      });
+      if (selectedStream?.description) {
+        selectedDescription = selectedStream.description;
+      }
+    }
+
+    if (!selectedDescription && city_name && city_name.length > 0) {
+      // Find the first city in the filter that has a description
+      const selectedCity = await this.cityRepository.findOne({
+        where: {
+          name: ILike(`%${city_name[0]}%`),
+        },
+        select: ["description"],
+      });
+      if (selectedCity?.description) {
+        selectedDescription = selectedCity.description;
+      }
+    }
+
+    if (!selectedDescription && state_name && state_name.length > 0) {
+      // Find the first state in the filter that has a description
+      const selectedState = await this.stateRepository.findOne({
+        where: {
+          name: ILike(`%${state_name[0]}%`),
+        },
+        select: ["description"],
+      });
+      if (selectedState?.description) {
+        selectedDescription = selectedState.description;
+      }
+    }
+
     return {
       filter_section: filterSection,
       colleges: sortedResult,
       total_colleges_count: totalCollegesCount,
+      selected_description: selectedDescription || undefined,
     };
   }
 

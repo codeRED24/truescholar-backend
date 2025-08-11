@@ -7,8 +7,6 @@ import {
   Unique,
   OneToMany,
   Index,
-  ManyToOne,
-  JoinColumn,
 } from "typeorm";
 import { CourseGroup } from "../../courses_module/course-group/course_group.entity";
 import { CollegeRanking } from "../../college/college-ranking/college-ranking.entity";
@@ -30,6 +28,9 @@ export class Stream {
 
   @Column({ type: "varchar", length: 300, nullable: true })
   stream_name: string;
+
+  @Column("text", { nullable: true })
+  description: string;
 
   @Column({ type: "varchar", length: 500, nullable: true })
   logo_url: string;

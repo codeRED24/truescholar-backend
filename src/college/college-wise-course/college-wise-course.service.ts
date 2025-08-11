@@ -188,6 +188,7 @@ export class CollegeWiseCourseService {
         "founded_year",
         "total_student",
         "campus_size",
+        "logo_img",
       ],
     });
     if (!college) {

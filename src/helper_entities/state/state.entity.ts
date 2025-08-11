@@ -22,6 +22,9 @@ export class State {
   @CreateDateColumn({ type: "timestamp" })
   created_at: Date;
 
+  @Column("text", { nullable: true })
+  description: string;
+
   @UpdateDateColumn({ type: "timestamp" })
   updated_at: Date;
 
