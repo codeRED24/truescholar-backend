@@ -87,7 +87,6 @@ export class CollegeInfoController {
     @Query("college_name") college_name?: string,
     @Query("city_name") city_name?: string,
     @Query("state_name") state_name?: string,
-    // @Query("country_id") country_id?: number,
     @Query("type_of_institute") type_of_institute?: string,
     @Query("stream_name") stream_name?: string,
     @Query("is_active") is_active?: boolean,
@@ -95,17 +94,6 @@ export class CollegeInfoController {
     @Query("page") page: number = 1,
     @Query("limit") limit: number = 51000
   ): Promise<CollegeListingResponseDto> {
-    // console.log({
-    //   city_name,
-    //   state_name,
-    //   // country_id,
-    //   type_of_institute,
-    //   stream_name,
-    //   fee_range,
-    //   is_active,
-    //   page,
-    //   limit,
-    // });
     const citiesArray = city_name
       ? city_name.split(",").map((s) => s.trim())
       : undefined;
@@ -121,19 +109,10 @@ export class CollegeInfoController {
     const feeRangeArray = fee_range
       ? fee_range.split(",").map((s) => s.trim())
       : undefined;
-
-    // console.log({
-    //   citiesArray,
-    //   statesArray,
-    //   streamsArray,
-    //   typeOfInstituteArray,
-    //   feeRangeArray,
-    // });
     return this.collegeInfoService.findAll(
       college_name,
       citiesArray,
       statesArray,
-      // country_id,
       typeOfInstituteArray,
       streamsArray,
       feeRangeArray,

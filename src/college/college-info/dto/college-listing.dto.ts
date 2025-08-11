@@ -68,4 +68,5 @@ export class CollegeListingResponseDto {
   filter_section: CollegeFilterDto;
   colleges: CollegeListingDto[];
   total_colleges_count: number;
+  selected_description?: string;
 }
