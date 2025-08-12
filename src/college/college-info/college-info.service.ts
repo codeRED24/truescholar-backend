@@ -2258,6 +2258,22 @@ export class CollegeInfoService {
       );
       news_section = this.getLatestUpdatedObjects(news_section);
 
+      // Fetch city and state names
+      let cityName = null;
+      let stateName = null;
+      if (collegeFaqData.city_id) {
+        const cityRow = await this.cityRepository.findOne({
+          where: { city_id: collegeFaqData.city_id },
+        });
+        cityName = cityRow?.name || null;
+      }
+      if (collegeFaqData.state_id) {
+        const stateRow = await this.stateRepository.findOne({
+          where: { state_id: collegeFaqData.state_id },
+        });
+        stateName = stateRow?.name || null;
+      }
+
       return {
         college_information: {
           college_id: collegeFaqData.college_id,
@@ -2271,6 +2287,9 @@ export class CollegeInfoService {
           city_id: collegeFaqData.city_id,
           state_id: collegeFaqData.state_id,
           country_id: collegeFaqData.country_id,
+          city: cityName,
+          state: stateName,
+          country: collegeFaqData.country?.name || null,
           location: collegeFaqData.location,
           PIN_code: collegeFaqData.PIN_code,
           latitude_longitude: collegeFaqData.latitude_longitude,
@@ -2287,9 +2306,6 @@ export class CollegeInfoService {
           UGC_approved: collegeFaqData.UGC_approved,
           kapp_rating: collegeFaqData.kapp_rating,
           kapp_score: collegeFaqData.kapp_score,
-          city: collegeFaqData.city?.name || null,
-          state: collegeFaqData.state?.name || null,
-          country: collegeFaqData.country?.name || null,
           primary_stream_id: collegeFaqData.primary_stream_id || null,
           nacc_grade: collegeFaqData.nacc_grade,
           slug: collegeFaqData.slug,
@@ -2451,6 +2467,22 @@ export class CollegeInfoService {
         course_group_full_name: fee.course_group_full_name,
       }));
 
+      // Fetch city and state names
+      let cityName = null;
+      let stateName = null;
+      if (collegeInfo.city_id) {
+        const cityRow = await this.cityRepository.findOne({
+          where: { city_id: collegeInfo.city_id },
+        });
+        cityName = cityRow?.name || null;
+      }
+      if (collegeInfo.state_id) {
+        const stateRow = await this.stateRepository.findOne({
+          where: { state_id: collegeInfo.state_id },
+        });
+        stateName = stateRow?.name || null;
+      }
+
       return {
         college_information: {
           college_id: collegeInfo.college_id,
@@ -2480,8 +2512,8 @@ export class CollegeInfoService {
           UGC_approved: collegeInfo.UGC_approved,
           kapp_rating: collegeInfo.kapp_rating,
           kapp_score: collegeInfo.kapp_score,
-          city: collegeInfo.city?.name || null,
-          state: collegeInfo.state?.name || null,
+          city: cityName,
+          state: stateName,
           country: collegeInfo.country?.name || null,
           nacc_grade: collegeInfo.nacc_grade,
           slug: collegeInfo.slug,
@@ -2575,6 +2607,20 @@ export class CollegeInfoService {
         ),
       ]);
 
+      // Fetch city and state names
+      let cityName = null;
+      let stateName = null;
+      if (collegeInfo.length) {
+        const cityRow = await this.cityRepository.findOne({
+          where: { city_id: collegeInfo[0].city_id },
+        });
+        const stateRow = await this.stateRepository.findOne({
+          where: { state_id: collegeInfo[0].state_id },
+        });
+        cityName = cityRow?.name || null;
+        stateName = stateRow?.name || null;
+      }
+
       if (!collegeInfo.length) {
         throw new NotFoundException(`College info with ID ${id} not found`);
       }
@@ -2662,10 +2708,13 @@ export class CollegeInfoService {
         collegeInfo[0].college_id
       );
 
+      // Add city and state fields to the response, similar to findOneGrouped
       const response: CoursesAndFeesResponseDto = {
         college_information: {
           ...college,
           course_count: courseCount,
+          city: cityName,
+          state: stateName,
           ...dynamicFields,
         },
         news_section: this.getLatestUpdatedObjects(
@@ -3118,6 +3167,22 @@ export class CollegeInfoService {
         collegeInfo.slug,
         collegeInfo.college_id
       );
+      // Fetch city and state names
+      let cityName = null;
+      let stateName = null;
+      if (collegeInfo.city_id) {
+        const cityRow = await this.cityRepository.findOne({
+          where: { city_id: collegeInfo.city_id },
+        });
+        cityName = cityRow?.name || null;
+      }
+      if (collegeInfo.state_id) {
+        const stateRow = await this.stateRepository.findOne({
+          where: { state_id: collegeInfo.state_id },
+        });
+        stateName = stateRow?.name || null;
+      }
+
       const response: PlacementDto = {
         college_information: {
           college_id: collegeInfo.college_id,
@@ -3131,8 +3196,8 @@ export class CollegeInfoService {
           city_id: collegeInfo.city_id,
           state_id: collegeInfo.state_id,
           country_id: collegeInfo.country_id,
-          city: collegeInfo?.city?.name,
-          state: collegeInfo?.state?.name,
+          city: cityName,
+          state: stateName,
           country: collegeInfo?.country?.name,
           course_count: courseCount,
           nacc_grade: collegeInfo.nacc_grade, // Add nacc_grade
@@ -3878,7 +3943,22 @@ export class CollegeInfoService {
       return response;
     }
 
-    // Build the response object
+    // Fetch city and state names
+    let cityName = null;
+    let stateName = null;
+    if (collegeInfo.city_id) {
+      const cityRow = await this.cityRepository.findOne({
+        where: { city_id: collegeInfo.city_id },
+      });
+      cityName = cityRow?.name || null;
+    }
+    if (collegeInfo.state_id) {
+      const stateRow = await this.stateRepository.findOne({
+        where: { state_id: collegeInfo.state_id },
+      });
+      stateName = stateRow?.name || null;
+    }
+
     const response: RankingDto = {
       college_information: {
         college_id: collegeInfo.college_id,
@@ -3892,6 +3972,9 @@ export class CollegeInfoService {
         city_id: collegeInfo.city_id,
         state_id: collegeInfo.state_id,
         country_id: collegeInfo.country_id,
+        city: cityName,
+        state: stateName,
+        country: collegeInfo.country?.name || null,
         location: collegeInfo.location,
         PIN_code: collegeInfo.PIN_code,
         latitude_longitude: collegeInfo.latitude_longitude,
@@ -3908,9 +3991,6 @@ export class CollegeInfoService {
         UGC_approved: collegeInfo.UGC_approved,
         kapp_rating: collegeInfo.kapp_rating,
         kapp_score: collegeInfo.kapp_score,
-        city: collegeInfo.city?.name || null,
-        state: collegeInfo.state?.name || null,
-        country: collegeInfo.country?.name || null,
         nacc_grade: collegeInfo.nacc_grade,
         slug: collegeInfo.slug,
         girls_only: collegeInfo.girls_only,
