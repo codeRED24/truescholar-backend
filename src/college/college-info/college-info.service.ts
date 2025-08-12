@@ -24,6 +24,7 @@ import {
   CollegeNewsResponseDto,
   CollegeWiseNewsResponseDto,
 } from "./dto/college-grouped-response.dto";
+import { CollegeSitemapResponseDto } from "./dto/sitemap-response.dto";
 import {
   CoursesAndFeesResponseDto,
   CoursesFiltersResponseDto,
@@ -4579,5 +4580,204 @@ export class CollegeInfoService {
       logo_url: city.logo_url || null,
       kapp_score: city.kapp_score || "0",
     }));
+  }
+
+  // Get college sitemap data with available tabs (fixed version)
+  async getCollegeSitemapData(
+    page: number = 1,
+    limit: number = 5000
+  ): Promise<CollegeSitemapResponseDto> {
+    const offset = (page - 1) * limit;
+
+    const query = `
+      SELECT DISTINCT
+        ci.college_id,
+        ci.slug,
+        ci.college_name
+      FROM 
+        college_info ci
+      JOIN college_content cc ON ci.college_id = cc.college_id
+      WHERE 
+        ci.is_active = true
+        AND ci.slug IS NOT NULL
+        AND cc.is_active = true
+        AND cc.silos = 'info'
+      ORDER BY ci.college_id
+      LIMIT $1 OFFSET $2
+    `;
+
+    const countQuery = `
+      SELECT COUNT(DISTINCT ci.college_id) as total
+      FROM college_info ci
+      JOIN college_content cc ON ci.college_id = cc.college_id
+      WHERE ci.is_active = true 
+        AND ci.slug IS NOT NULL
+        AND cc.is_active = true
+        AND cc.silos = 'info'
+    `;
+
+    const [colleges, countResult] = await Promise.all([
+      this.dataSource.query(query, [limit, offset]),
+      this.dataSource.query(countQuery),
+    ]);
+
+    const total = parseInt(countResult[0]?.total || "0", 10);
+
+    // Get all college IDs for batch queries
+    const collegeIds = colleges.map((c) => c.college_id);
+
+    if (collegeIds.length === 0) {
+      return { colleges: [], total };
+    }
+
+    // Batch fetch all content and counts
+    const [
+      contentResults,
+      courseCountResults,
+      placementCountResults,
+      feesCountResults,
+      rankingCountResults,
+      datesCountResults,
+      cutoffCountResults,
+    ] = await Promise.all([
+      this.dataSource.query(
+        `
+        SELECT college_id, silos 
+        FROM college_content 
+        WHERE college_id = ANY($1) AND is_active = true
+      `,
+        [collegeIds]
+      ),
+      this.dataSource.query(
+        `
+        SELECT college_id, COUNT(*) as count 
+        FROM college_wise_course 
+        WHERE college_id = ANY($1) 
+        GROUP BY college_id
+      `,
+        [collegeIds]
+      ),
+      this.dataSource.query(
+        `
+        SELECT college_id, COUNT(*) as count 
+        FROM college_wise_placement 
+        WHERE college_id = ANY($1) 
+        GROUP BY college_id
+      `,
+        [collegeIds]
+      ),
+      this.dataSource.query(
+        `
+        SELECT college_id, COUNT(*) as count 
+        FROM college_wise_fees 
+        WHERE college_id = ANY($1) 
+        GROUP BY college_id
+      `,
+        [collegeIds]
+      ),
+      this.dataSource.query(
+        `
+        SELECT college_id, COUNT(*) as count 
+        FROM college_ranking 
+        WHERE college_id = ANY($1) 
+        GROUP BY college_id
+      `,
+        [collegeIds]
+      ),
+      this.dataSource.query(
+        `
+        SELECT college_id, COUNT(*) as count 
+        FROM college_dates 
+        WHERE college_id = ANY($1) 
+        GROUP BY college_id
+      `,
+        [collegeIds]
+      ),
+      this.dataSource.query(
+        `
+        SELECT college_id, COUNT(*) as count 
+        FROM college_cutoff 
+        WHERE college_id = ANY($1) 
+        GROUP BY college_id
+      `,
+        [collegeIds]
+      ),
+    ]);
+
+    // Create lookup maps for efficient access
+    const contentMap = new Map<number, Set<string>>();
+    contentResults.forEach((row) => {
+      if (!contentMap.has(row.college_id)) {
+        contentMap.set(row.college_id, new Set());
+      }
+      contentMap.get(row.college_id)?.add(row.silos);
+    });
+
+    const createCountMap = (results: any[]) => {
+      const map = new Map<number, number>();
+      results.forEach((row) => map.set(row.college_id, parseInt(row.count)));
+      return map;
+    };
+
+    const courseCountMap = createCountMap(courseCountResults);
+    const placementCountMap = createCountMap(placementCountResults);
+    const feesCountMap = createCountMap(feesCountResults);
+    const rankingCountMap = createCountMap(rankingCountResults);
+    const datesCountMap = createCountMap(datesCountResults);
+    const cutoffCountMap = createCountMap(cutoffCountResults);
+
+    // Process each college
+    const collegesWithTabs = colleges.map((college) => {
+      const collegeId = college.college_id;
+      const activeSilos = contentMap.get(collegeId) || new Set();
+
+      const availableTabs = ["info"]; // Info tab is always available
+
+      // Content-based tabs
+      if (activeSilos.has("highlight")) availableTabs.push("highlights");
+      if (
+        activeSilos.has("courses") ||
+        (courseCountMap.get(collegeId) || 0) > 0
+      ) {
+        availableTabs.push("courses");
+      }
+      if (activeSilos.has("fees") || (feesCountMap.get(collegeId) || 0) > 0) {
+        availableTabs.push("fees");
+      }
+      if (activeSilos.has("admission")) availableTabs.push("admission-process");
+      if (
+        activeSilos.has("cutoff") ||
+        (cutoffCountMap.get(collegeId) || 0) > 0
+      ) {
+        availableTabs.push("cutoffs");
+      }
+      if (
+        activeSilos.has("placement") ||
+        (placementCountMap.get(collegeId) || 0) > 0
+      ) {
+        availableTabs.push("placements");
+      }
+      if (
+        activeSilos.has("ranking") ||
+        (rankingCountMap.get(collegeId) || 0) > 0
+      ) {
+        availableTabs.push("rankings");
+      }
+      if (activeSilos.has("scholarship")) availableTabs.push("scholarship");
+      if (activeSilos.has("facility")) availableTabs.push("facilities");
+      if (activeSilos.has("faq")) availableTabs.push("faq");
+      if (activeSilos.has("news")) availableTabs.push("news");
+
+      return {
+        college_id: college.college_id,
+        slug: college.slug,
+        available_tabs: availableTabs,
+      };
+    });
+
+    return {
+      colleges: collegesWithTabs,
+      total,
+    };
   }
 }
