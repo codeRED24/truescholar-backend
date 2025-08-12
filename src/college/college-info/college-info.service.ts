@@ -24,6 +24,7 @@ import {
   CollegeNewsResponseDto,
   CollegeWiseNewsResponseDto,
 } from "./dto/college-grouped-response.dto";
+import { CollegeSitemapResponseDto } from "./dto/sitemap-response.dto";
 import {
   CoursesAndFeesResponseDto,
   CoursesFiltersResponseDto,
@@ -2257,6 +2258,22 @@ export class CollegeInfoService {
       );
       news_section = this.getLatestUpdatedObjects(news_section);
 
+      // Fetch city and state names
+      let cityName = null;
+      let stateName = null;
+      if (collegeFaqData.city_id) {
+        const cityRow = await this.cityRepository.findOne({
+          where: { city_id: collegeFaqData.city_id },
+        });
+        cityName = cityRow?.name || null;
+      }
+      if (collegeFaqData.state_id) {
+        const stateRow = await this.stateRepository.findOne({
+          where: { state_id: collegeFaqData.state_id },
+        });
+        stateName = stateRow?.name || null;
+      }
+
       return {
         college_information: {
           college_id: collegeFaqData.college_id,
@@ -2270,6 +2287,9 @@ export class CollegeInfoService {
           city_id: collegeFaqData.city_id,
           state_id: collegeFaqData.state_id,
           country_id: collegeFaqData.country_id,
+          city: cityName,
+          state: stateName,
+          country: collegeFaqData.country?.name || null,
           location: collegeFaqData.location,
           PIN_code: collegeFaqData.PIN_code,
           latitude_longitude: collegeFaqData.latitude_longitude,
@@ -2286,9 +2306,6 @@ export class CollegeInfoService {
           UGC_approved: collegeFaqData.UGC_approved,
           kapp_rating: collegeFaqData.kapp_rating,
           kapp_score: collegeFaqData.kapp_score,
-          city: collegeFaqData.city?.name || null,
-          state: collegeFaqData.state?.name || null,
-          country: collegeFaqData.country?.name || null,
           primary_stream_id: collegeFaqData.primary_stream_id || null,
           nacc_grade: collegeFaqData.nacc_grade,
           slug: collegeFaqData.slug,
@@ -2450,6 +2467,22 @@ export class CollegeInfoService {
         course_group_full_name: fee.course_group_full_name,
       }));
 
+      // Fetch city and state names
+      let cityName = null;
+      let stateName = null;
+      if (collegeInfo.city_id) {
+        const cityRow = await this.cityRepository.findOne({
+          where: { city_id: collegeInfo.city_id },
+        });
+        cityName = cityRow?.name || null;
+      }
+      if (collegeInfo.state_id) {
+        const stateRow = await this.stateRepository.findOne({
+          where: { state_id: collegeInfo.state_id },
+        });
+        stateName = stateRow?.name || null;
+      }
+
       return {
         college_information: {
           college_id: collegeInfo.college_id,
@@ -2479,8 +2512,8 @@ export class CollegeInfoService {
           UGC_approved: collegeInfo.UGC_approved,
           kapp_rating: collegeInfo.kapp_rating,
           kapp_score: collegeInfo.kapp_score,
-          city: collegeInfo.city?.name || null,
-          state: collegeInfo.state?.name || null,
+          city: cityName,
+          state: stateName,
           country: collegeInfo.country?.name || null,
           nacc_grade: collegeInfo.nacc_grade,
           slug: collegeInfo.slug,
@@ -2574,6 +2607,20 @@ export class CollegeInfoService {
         ),
       ]);
 
+      // Fetch city and state names
+      let cityName = null;
+      let stateName = null;
+      if (collegeInfo.length) {
+        const cityRow = await this.cityRepository.findOne({
+          where: { city_id: collegeInfo[0].city_id },
+        });
+        const stateRow = await this.stateRepository.findOne({
+          where: { state_id: collegeInfo[0].state_id },
+        });
+        cityName = cityRow?.name || null;
+        stateName = stateRow?.name || null;
+      }
+
       if (!collegeInfo.length) {
         throw new NotFoundException(`College info with ID ${id} not found`);
       }
@@ -2661,10 +2708,13 @@ export class CollegeInfoService {
         collegeInfo[0].college_id
       );
 
+      // Add city and state fields to the response, similar to findOneGrouped
       const response: CoursesAndFeesResponseDto = {
         college_information: {
           ...college,
           course_count: courseCount,
+          city: cityName,
+          state: stateName,
           ...dynamicFields,
         },
         news_section: this.getLatestUpdatedObjects(
@@ -3117,6 +3167,22 @@ export class CollegeInfoService {
         collegeInfo.slug,
         collegeInfo.college_id
       );
+      // Fetch city and state names
+      let cityName = null;
+      let stateName = null;
+      if (collegeInfo.city_id) {
+        const cityRow = await this.cityRepository.findOne({
+          where: { city_id: collegeInfo.city_id },
+        });
+        cityName = cityRow?.name || null;
+      }
+      if (collegeInfo.state_id) {
+        const stateRow = await this.stateRepository.findOne({
+          where: { state_id: collegeInfo.state_id },
+        });
+        stateName = stateRow?.name || null;
+      }
+
       const response: PlacementDto = {
         college_information: {
           college_id: collegeInfo.college_id,
@@ -3130,8 +3196,8 @@ export class CollegeInfoService {
           city_id: collegeInfo.city_id,
           state_id: collegeInfo.state_id,
           country_id: collegeInfo.country_id,
-          city: collegeInfo?.city?.name,
-          state: collegeInfo?.state?.name,
+          city: cityName,
+          state: stateName,
           country: collegeInfo?.country?.name,
           course_count: courseCount,
           nacc_grade: collegeInfo.nacc_grade, // Add nacc_grade
@@ -3877,7 +3943,22 @@ export class CollegeInfoService {
       return response;
     }
 
-    // Build the response object
+    // Fetch city and state names
+    let cityName = null;
+    let stateName = null;
+    if (collegeInfo.city_id) {
+      const cityRow = await this.cityRepository.findOne({
+        where: { city_id: collegeInfo.city_id },
+      });
+      cityName = cityRow?.name || null;
+    }
+    if (collegeInfo.state_id) {
+      const stateRow = await this.stateRepository.findOne({
+        where: { state_id: collegeInfo.state_id },
+      });
+      stateName = stateRow?.name || null;
+    }
+
     const response: RankingDto = {
       college_information: {
         college_id: collegeInfo.college_id,
@@ -3891,6 +3972,9 @@ export class CollegeInfoService {
         city_id: collegeInfo.city_id,
         state_id: collegeInfo.state_id,
         country_id: collegeInfo.country_id,
+        city: cityName,
+        state: stateName,
+        country: collegeInfo.country?.name || null,
         location: collegeInfo.location,
         PIN_code: collegeInfo.PIN_code,
         latitude_longitude: collegeInfo.latitude_longitude,
@@ -3907,9 +3991,6 @@ export class CollegeInfoService {
         UGC_approved: collegeInfo.UGC_approved,
         kapp_rating: collegeInfo.kapp_rating,
         kapp_score: collegeInfo.kapp_score,
-        city: collegeInfo.city?.name || null,
-        state: collegeInfo.state?.name || null,
-        country: collegeInfo.country?.name || null,
         nacc_grade: collegeInfo.nacc_grade,
         slug: collegeInfo.slug,
         girls_only: collegeInfo.girls_only,
@@ -4579,5 +4660,204 @@ export class CollegeInfoService {
       logo_url: city.logo_url || null,
       kapp_score: city.kapp_score || "0",
     }));
+  }
+
+  // Get college sitemap data with available tabs (fixed version)
+  async getCollegeSitemapData(
+    page: number = 1,
+    limit: number = 5000
+  ): Promise<CollegeSitemapResponseDto> {
+    const offset = (page - 1) * limit;
+
+    const query = `
+      SELECT DISTINCT
+        ci.college_id,
+        ci.slug,
+        ci.college_name
+      FROM 
+        college_info ci
+      JOIN college_content cc ON ci.college_id = cc.college_id
+      WHERE 
+        ci.is_active = true
+        AND ci.slug IS NOT NULL
+        AND cc.is_active = true
+        AND cc.silos = 'info'
+      ORDER BY ci.college_id
+      LIMIT $1 OFFSET $2
+    `;
+
+    const countQuery = `
+      SELECT COUNT(DISTINCT ci.college_id) as total
+      FROM college_info ci
+      JOIN college_content cc ON ci.college_id = cc.college_id
+      WHERE ci.is_active = true 
+        AND ci.slug IS NOT NULL
+        AND cc.is_active = true
+        AND cc.silos = 'info'
+    `;
+
+    const [colleges, countResult] = await Promise.all([
+      this.dataSource.query(query, [limit, offset]),
+      this.dataSource.query(countQuery),
+    ]);
+
+    const total = parseInt(countResult[0]?.total || "0", 10);
+
+    // Get all college IDs for batch queries
+    const collegeIds = colleges.map((c) => c.college_id);
+
+    if (collegeIds.length === 0) {
+      return { colleges: [], total };
+    }
+
+    // Batch fetch all content and counts
+    const [
+      contentResults,
+      courseCountResults,
+      placementCountResults,
+      feesCountResults,
+      rankingCountResults,
+      datesCountResults,
+      cutoffCountResults,
+    ] = await Promise.all([
+      this.dataSource.query(
+        `
+        SELECT college_id, silos 
+        FROM college_content 
+        WHERE college_id = ANY($1) AND is_active = true
+      `,
+        [collegeIds]
+      ),
+      this.dataSource.query(
+        `
+        SELECT college_id, COUNT(*) as count 
+        FROM college_wise_course 
+        WHERE college_id = ANY($1) 
+        GROUP BY college_id
+      `,
+        [collegeIds]
+      ),
+      this.dataSource.query(
+        `
+        SELECT college_id, COUNT(*) as count 
+        FROM college_wise_placement 
+        WHERE college_id = ANY($1) 
+        GROUP BY college_id
+      `,
+        [collegeIds]
+      ),
+      this.dataSource.query(
+        `
+        SELECT college_id, COUNT(*) as count 
+        FROM college_wise_fees 
+        WHERE college_id = ANY($1) 
+        GROUP BY college_id
+      `,
+        [collegeIds]
+      ),
+      this.dataSource.query(
+        `
+        SELECT college_id, COUNT(*) as count 
+        FROM college_ranking 
+        WHERE college_id = ANY($1) 
+        GROUP BY college_id
+      `,
+        [collegeIds]
+      ),
+      this.dataSource.query(
+        `
+        SELECT college_id, COUNT(*) as count 
+        FROM college_dates 
+        WHERE college_id = ANY($1) 
+        GROUP BY college_id
+      `,
+        [collegeIds]
+      ),
+      this.dataSource.query(
+        `
+        SELECT college_id, COUNT(*) as count 
+        FROM college_cutoff 
+        WHERE college_id = ANY($1) 
+        GROUP BY college_id
+      `,
+        [collegeIds]
+      ),
+    ]);
+
+    // Create lookup maps for efficient access
+    const contentMap = new Map<number, Set<string>>();
+    contentResults.forEach((row) => {
+      if (!contentMap.has(row.college_id)) {
+        contentMap.set(row.college_id, new Set());
+      }
+      contentMap.get(row.college_id)?.add(row.silos);
+    });
+
+    const createCountMap = (results: any[]) => {
+      const map = new Map<number, number>();
+      results.forEach((row) => map.set(row.college_id, parseInt(row.count)));
+      return map;
+    };
+
+    const courseCountMap = createCountMap(courseCountResults);
+    const placementCountMap = createCountMap(placementCountResults);
+    const feesCountMap = createCountMap(feesCountResults);
+    const rankingCountMap = createCountMap(rankingCountResults);
+    const datesCountMap = createCountMap(datesCountResults);
+    const cutoffCountMap = createCountMap(cutoffCountResults);
+
+    // Process each college
+    const collegesWithTabs = colleges.map((college) => {
+      const collegeId = college.college_id;
+      const activeSilos = contentMap.get(collegeId) || new Set();
+
+      const availableTabs = ["info"]; // Info tab is always available
+
+      // Content-based tabs
+      if (activeSilos.has("highlight")) availableTabs.push("highlights");
+      if (
+        activeSilos.has("courses") ||
+        (courseCountMap.get(collegeId) || 0) > 0
+      ) {
+        availableTabs.push("courses");
+      }
+      if (activeSilos.has("fees") || (feesCountMap.get(collegeId) || 0) > 0) {
+        availableTabs.push("fees");
+      }
+      if (activeSilos.has("admission")) availableTabs.push("admission-process");
+      if (
+        activeSilos.has("cutoff") ||
+        (cutoffCountMap.get(collegeId) || 0) > 0
+      ) {
+        availableTabs.push("cutoffs");
+      }
+      if (
+        activeSilos.has("placement") ||
+        (placementCountMap.get(collegeId) || 0) > 0
+      ) {
+        availableTabs.push("placements");
+      }
+      if (
+        activeSilos.has("ranking") ||
+        (rankingCountMap.get(collegeId) || 0) > 0
+      ) {
+        availableTabs.push("rankings");
+      }
+      if (activeSilos.has("scholarship")) availableTabs.push("scholarship");
+      if (activeSilos.has("facility")) availableTabs.push("facilities");
+      if (activeSilos.has("faq")) availableTabs.push("faq");
+      if (activeSilos.has("news")) availableTabs.push("news");
+
+      return {
+        college_id: college.college_id,
+        slug: college.slug,
+        available_tabs: availableTabs,
+      };
+    });
+
+    return {
+      colleges: collegesWithTabs,
+      total,
+    };
   }
 }

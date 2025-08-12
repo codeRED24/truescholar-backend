@@ -13,9 +13,14 @@ import {
 import { CollegeWiseCourse } from "../../college/college-wise-course/college_wise_course.entity";
 import { Specialization } from "../../specializations/specialization/specialization.entity";
 import { CourseGroup } from "../course-group/course_group.entity";
-import { CourseLevel,DurationType,CourseType,CourseLevels,CourseMode } from "../../common/enums";
+import {
+  CourseLevel,
+  DurationType,
+  CourseType,
+  CourseLevels,
+  CourseMode,
+} from "../../common/enums";
 import { Stream } from "../../helper_entities/stream/stream.entity";
-
 
 @Entity("courses")
 @Unique(["slug"])
@@ -98,15 +103,14 @@ export class Course {
   @Column({ type: "enum", enum: CourseType, nullable: true })
   course_type: CourseType;
 
-  @Column({ type: "enum", enum: CourseMode, nullable: true })
-  course_mode: CourseMode;
+  // @Column({ type: "enum", enum: CourseMode, nullable: true })
+  // course_mode: CourseMode;
 
   @Column({ type: "enum", enum: CourseLevels, nullable: true })
   course_level: CourseLevels;
 
   @Column({ type: "int", nullable: true })
   stream_id: number;
-
 
   @ManyToOne(() => CourseGroup, (courseGroup) => courseGroup.courses, {
     nullable: true,
@@ -125,11 +129,9 @@ export class Course {
     nullable: true,
     onDelete: "SET NULL",
   })
-
   @ManyToOne(() => Stream, { nullable: true, onDelete: "SET NULL" })
   @JoinColumn({ name: "stream_id" })
   stream: Stream;
-
 
   @JoinColumn({ name: "specialization_id" })
   college: Specialization;

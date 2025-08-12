@@ -175,82 +175,107 @@ export class CollegeWiseCourseService {
   }
 
   // Returns basic college info and minimal data of college's courses
-  async getCollegeBasicWithCourses(collegeId: number, course_id: number) {
+  async getCollegeBasicWithCourses(collegeId: number, course_id?: number) {
     // Fetch basic college info
     const college = await this.collegeInfoRepository.findOne({
       where: { college_id: collegeId, is_active: Not(false) },
-      select: [
-        "college_id",
-        "college_name",
-        "slug",
-        "is_online",
-        "type_of_institute",
-        "founded_year",
-        "total_student",
-        "campus_size",
-        "logo_img",
-      ],
     });
+
     if (!college) {
       throw new NotFoundException(`College with ID ${collegeId} not found`);
     }
 
     let CollegesCourses;
     let coursesCount = 0;
+    let feesData = null;
+    let collegeRankingData = null;
+    let collegePlacementData = null;
+
+    // Always fetch college ranking and placement data using college_id
+    const [rankingData, placementData] = await Promise.all([
+      this.collegeRankingRepository.find({
+        where: { college_id: collegeId },
+      }),
+      this.collegePlacementRepository.find({
+        where: { college_id: collegeId },
+        select: ["year", "particulars", "title"],
+      }),
+    ]);
+
+    // Fetch ranking agency details for the rankings
+    const rankingAgencyIds = rankingData
+      .map((ranking) => ranking.ranking_agency_id)
+      .filter(Boolean);
+    const rankingAgencies =
+      await this.rankingAgencyRepository.findByIds(rankingAgencyIds);
+
+    // Transform ranking data to include agency information
+    collegeRankingData = rankingData.map((ranking) => {
+      const agency = rankingAgencies.find(
+        (a) => a.ranking_agency_id === ranking.ranking_agency_id
+      );
+      return {
+        ...ranking,
+        rank_title: agency?.name || ranking.rank_title,
+        agency_logo: agency?.logo || null,
+        agency_name: agency?.name || null,
+      };
+    });
+    collegePlacementData = placementData;
 
     if (course_id) {
-      // Fetch the filtered courses and total count in parallel
-      const [courses, count] = await Promise.all([
-        this.collegeWiseCourseRepository.find({
-          where: [
-            {
-              college_wise_course_id: course_id,
-              college_id: collegeId,
-            },
-          ],
-          select: [
-            "college_wise_course_id",
-            "name",
-            "course_id",
-            "degree_type",
-            "level",
-            "duration",
-            "eligibility",
-            "is_online",
-            "level",
-            "course_format",
-            "duration_type",
-            "fees",
-            "salary",
-            "course_brochure",
-            "syllabus",
-            "total_seats",
-          ],
-        }),
-        this.collegeWiseCourseRepository.count({
-          where: { college_id: collegeId },
-        }),
-      ]);
-      CollegesCourses = courses;
-      coursesCount = count;
+      // First, get the course to retrieve course_group_id
+      const courseEntity = await this.collegeWiseCourseRepository.findOne({
+        where: { college_wise_course_id: course_id, college_id: collegeId },
+        select: [
+          "college_wise_course_id",
+          "name",
+          "course_id",
+          "degree_type",
+          "level",
+          "duration",
+          "eligibility",
+          "is_online",
+          "course_format",
+          "duration_type",
+          "fees",
+          "salary",
+          "course_brochure",
+          "syllabus",
+          "total_seats",
+          "course_group_id",
+        ],
+      });
+
+      if (!courseEntity) {
+        throw new NotFoundException(
+          `Course with ID ${course_id} not found for this college`
+        );
+      }
+
+      // Fetch fees data using course_group_id and college_id
+      feesData = await this.collegeWiseFeesRepository.findOne({
+        where: {
+          college_id: collegeId,
+          course_group_id: courseEntity.course_group_id,
+        },
+        order: {
+          created_at: "DESC",
+        },
+      });
+
+      // Get all courses count
+      coursesCount = await this.collegeWiseCourseRepository.count({
+        where: { college_id: collegeId },
+      });
+
+      CollegesCourses = [courseEntity];
     } else {
       // Fetch all courses and count in parallel
       const [courses, count] = await Promise.all([
         this.collegeWiseCourseRepository.find({
-          where: [{ college_id: collegeId }],
-          select: [
-            "college_wise_course_id",
-            "name",
-            // "course_id",
-            // "degree_type",
-            // "level",
-            // "duration",
-            // "eligibility",
-            // "is_online",
-            // "level",
-            // "course_format",
-            // "duration_type",
-          ],
+          where: { college_id: collegeId },
+          select: ["college_wise_course_id", "name"],
         }),
         this.collegeWiseCourseRepository.count({
           where: { college_id: collegeId },
@@ -267,6 +292,9 @@ export class CollegeWiseCourseService {
           ...college,
           CollegesCourses,
           coursesCount,
+          fees: feesData, // Only populated if course_id is provided
+          college_ranking: collegeRankingData,
+          college_wise_placement: collegePlacementData,
         },
       },
     };
@@ -604,7 +632,7 @@ export class CollegeWiseCourseService {
         "cwc.course_id",
         "cwc.is_active",
         "course.course_name",
-        "course.course_mode",
+        // "course.course_mode",
       ])
       .leftJoin("cwc.courses", "course")
       .where("cwc.course_id IS NOT NULL")
