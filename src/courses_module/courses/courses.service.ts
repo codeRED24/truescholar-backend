@@ -26,9 +26,8 @@ export class CourseService {
     private readonly courseGroupRepository: Repository<CourseGroup>,
     private readonly dataSource: DataSource,
     @InjectRepository(CourseContent)
-    private readonly courseContentRepository:Repository<CourseContent>
+    private readonly courseContentRepository: Repository<CourseContent>
   ) {}
-  
 
   // GET ALL
   async findAll(course_name?: string, spec_id?: number): Promise<Course[]> {
@@ -100,7 +99,7 @@ export class CourseService {
       }
       throw error;
     }
-  } 
+  }
   // PATCH /courses/:id
   async update(
     id: number,
@@ -167,7 +166,6 @@ export class CourseService {
         );
       }
 
-     
       const courseGroup = await this.courseGroupRepository.findOne({
         where: { course_group_id: createCourseDto.course_group_id },
       });
@@ -178,7 +176,6 @@ export class CourseService {
         );
       }
 
-      
       const course = this.courseRepository.create({
         ...createCourseDto,
         specialization_id: specialization.specialization_id,
@@ -201,23 +198,21 @@ export class CourseService {
     }
   }
 
-
   async getCourseContentBySilo(slug: string, silo_name: string) {
     return tryCatchWrapper(async () => {
-      
       const course = await this.dataSource.query(
         `SELECT course_id, course_name, short_name, slug, description, duration, created_at, updated_at 
          FROM courses 
          WHERE slug = $1;`,
         [slug]
       );
-  
+
       if (!course || !course.length) {
         throw new NotFoundException(`Course with slug ${slug} not found`);
       }
-  
-      const course_id = course[0].course_id; 
-  
+
+      const course_id = course[0].course_id;
+
       const [latestContent, distinctSilos] = await Promise.all([
         this.dataSource.query(
           `
@@ -238,7 +233,7 @@ export class CourseService {
           [course_id]
         ),
       ]);
-  
+
       let eligibilityData;
       if (silo_name === "info") {
         eligibilityData = await this.dataSource.query(
@@ -246,29 +241,25 @@ export class CourseService {
           [course_id]
         );
       }
-  
+
       return {
         courseInformation: {
-          ...course[0], 
+          ...course[0],
         },
         courseContent: latestContent.length > 0 ? latestContent[0] : null,
         distinctSilos,
-        ...(eligibilityData && { eligibility: eligibilityData[0]?.eligibility }),
+        ...(eligibilityData && {
+          eligibility: eligibilityData[0]?.eligibility,
+        }),
       };
     });
   }
-  
 
-  
-
-  
   async getInfoWithSilos(courseId: number) {
-    
     const infoRecords = await this.courseContentRepository.find({
       where: { course_id: courseId, silos: "info", is_active: true },
     });
 
-    
     const allSilos = await this.courseContentRepository
       .createQueryBuilder("content")
       .select("DISTINCT content.silos", "silos")
@@ -278,26 +269,27 @@ export class CourseService {
 
     return {
       infoRecords,
-      allSilos: allSilos.map((s) => s.silos), 
+      allSilos: allSilos.map((s) => s.silos),
     };
   }
 
   async getAllCourses(page: number = 1, limit: number = 9, search?: string) {
-    const skip = (page - 1) * limit; 
-  
-    
-    const whereClause = search
-      ? { course_name: ILike(`%${search}%`) } 
-      : {};
-  
+    const skip = (page - 1) * limit;
+
+    const whereClause = search ? { course_name: ILike(`%${search}%`) } : {};
+
     const [data, total] = await this.courseRepository.findAndCount({
-      select: ["course_id", "course_name", "course_mode"],
+      select: [
+        "course_id",
+        "course_name",
+        // "course_mode"
+      ],
       where: whereClause,
-      order: { course_id: "ASC" }, 
+      order: { course_id: "ASC" },
       take: limit,
       skip: skip,
     });
-  
+
     return {
       data,
       total,
@@ -311,14 +303,14 @@ export class CourseService {
       `SELECT course_id, short_name FROM courses WHERE slug = $1;`,
       [slug]
     );
-  
+
     if (course.length === 0) {
       return { message: "Course not found" };
     }
-  
+
     const course_id = course[0].course_id;
-    const short_name = course[0].short_name; 
-  
+    const short_name = course[0].short_name;
+
     const infoRecords = await this.dataSource.query(
       `SELECT * FROM course_content 
        WHERE course_id = $1 
@@ -326,26 +318,20 @@ export class CourseService {
        AND is_active = true;`,
       [course_id]
     );
-  
+
     const allSilos = await this.dataSource.query(
       `SELECT DISTINCT silos FROM course_content 
        WHERE course_id = $1 
        AND silos <> 'overview';`,
       [course_id]
     );
-  
+
     return {
       infoRecords: infoRecords.map((record) => ({
         ...record,
-        short_name, 
+        short_name,
       })),
       allSilos: allSilos.map((s: { silos: string }) => s.silos),
     };
   }
-  
-  
-
-  
-  
-
 }

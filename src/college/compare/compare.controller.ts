@@ -1,6 +1,7 @@
 import { Controller, Get, Query } from "@nestjs/common";
 import { CollegeInfoService } from "../college-info/college-info.service";
 import { CollegeWiseCourseService } from "../college-wise-course/college-wise-course.service";
+import { ApiQuery } from "@nestjs/swagger";
 
 @Controller("compare")
 export class CompareController {
@@ -10,6 +11,18 @@ export class CompareController {
   ) {}
 
   @Get()
+  @ApiQuery({
+    name: "college_id",
+    type: Number,
+    required: true,
+    description: "ID of the college",
+  })
+  @ApiQuery({
+    name: "course_id",
+    type: Number,
+    required: false,
+    description: "ID of the course (optional)",
+  })
   async compare(
     @Query("college_id") collegeId: string,
     @Query("course_id") courseId?: string

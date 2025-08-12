@@ -27,6 +27,7 @@ import { CollegeListingResponseDto } from "./dto/college-listing.dto";
 import { StreamListingDto } from "./dto/stream-listing.dto";
 import { CityListingDto } from "./dto/city-listing.dto";
 import { CutoffDto } from "../../helper_entities/college-comparision/dto/college-comparision.dto";
+import { CollegeSitemapResponseDto } from "./dto/sitemap-response.dto";
 
 @ApiTags("college-info")
 @Controller("college-info")
@@ -444,5 +445,31 @@ export class CollegeInfoController {
   @ApiResponse({ status: 200, description: "City listing with college count." })
   async getCityListing(): Promise<CityListingDto[]> {
     return this.collegeInfoService.getCityListing();
+  }
+
+  @Get("sitemap")
+  @ApiOperation({ summary: "Get college sitemap data with available tabs" })
+  @ApiQuery({
+    name: "page",
+    required: false,
+    description: "Page number",
+    schema: { default: 1 },
+  })
+  @ApiQuery({
+    name: "limit",
+    required: false,
+    description: "Number of colleges to fetch",
+    schema: { default: 5000 },
+  })
+  @ApiResponse({
+    status: 200,
+    description: "College sitemap data with available tabs.",
+    type: CollegeSitemapResponseDto,
+  })
+  async getCollegeSitemapData(
+    @Query("page") page: number = 1,
+    @Query("limit") limit: number = 1
+  ): Promise<CollegeSitemapResponseDto> {
+    return this.collegeInfoService.getCollegeSitemapData(page, limit);
   }
 }
