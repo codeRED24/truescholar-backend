@@ -9,10 +9,14 @@ import {
   IsInt,
 } from "class-validator";
 import { SlugValidator } from "../../../common/Validators/slug-validator";
-import { DurationType, CourseType, CourseMode, CourseLevels } from "../../../common/enums";
+import {
+  DurationType,
+  CourseType,
+  CourseMode,
+  CourseLevels,
+} from "../../../common/enums";
 
 export class CreateCourseDto {
-
   @ApiProperty({
     description: "Is the course active?",
     required: false,
@@ -41,10 +45,13 @@ export class CreateCourseDto {
   @Validate(SlugValidator)
   slug: string;
 
-  @ApiProperty({ description: "Course duration in months/other format", required: false })
+  @ApiProperty({
+    description: "Course duration in months/other format",
+    required: false,
+  })
   @IsOptional()
   @IsNumber()
-  duration_value?: number;  // This should be duration_value
+  duration_value?: number; // This should be duration_value
 
   @ApiProperty({ description: "Duration Type", required: false })
   @IsOptional()
@@ -56,10 +63,10 @@ export class CreateCourseDto {
   @IsString()
   course_type?: CourseType;
 
-  @ApiProperty({ description: "Course Mode", required: false })
-  @IsOptional()
-  @IsString()
-  course_mode?: CourseMode;
+  // @ApiProperty({ description: "Course Mode", required: false })
+  // @IsOptional()
+  // @IsString()
+  // course_mode?: CourseMode;
 
   @ApiProperty({ description: "Course Level", required: false })
   @IsOptional()
@@ -98,5 +105,4 @@ export class CreateCourseDto {
   @Type(() => Number) // Transform the input into a number
   @IsInt({ message: "Stream Id application must be a valid integer" }) // Ensure it's an integer
   stream_id?: number;
-
 }
