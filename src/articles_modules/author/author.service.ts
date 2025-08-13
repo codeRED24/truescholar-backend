@@ -2,17 +2,22 @@ import {
   Injectable,
   ConflictException,
   NotFoundException,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like, QueryFailedError } from 'typeorm';
-import { Author } from './author.entity';
-import { CreateAuthorDto } from './dto/create-author.dto';
-import { UpdateAuthorDto } from './dto/update-author.dto';
-import { CollegeContent } from '../../college/college-content/college-content.entity';
-import { ExamContent } from '../../exams_module/exam-content/exam_content.entity';
-import { Article } from '../articles/articles.entity';
-import { Exam } from '../../exams_module/exams/exams.entity';
-import { CollegeInfo } from '../../college/college-info/college-info.entity';
+  BadRequestException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, Like, QueryFailedError } from "typeorm";
+import { Author } from "./author.entity";
+import { CreateAuthorDto } from "./dto/create-author.dto";
+import { UpdateAuthorDto } from "./dto/update-author.dto";
+import { CollegeContent } from "../../college/college-content/college-content.entity";
+import { ExamContent } from "../../exams_module/exam-content/exam_content.entity";
+import { Article } from "../articles/articles.entity";
+import { Exam } from "../../exams_module/exams/exams.entity";
+import { CollegeInfo } from "../../college/college-info/college-info.entity";
+
+export interface AuthorWithArticleCount extends Author {
+  article_count: any;
+}
 
 @Injectable()
 export class AuthorService {
@@ -44,14 +49,38 @@ export class AuthorService {
   }
 
   // GET /authors/:id
-  async findOne(id: number): Promise<Author> {
+  async findOne(id: number): Promise<AuthorWithArticleCount> {
     const author = await this.authorRepository.findOne({
-      where: { author_id: id },
+      where: { author_id: id, is_active: true },
     });
     if (!author) {
       throw new NotFoundException(`Author with ID ${id} not found`);
     }
-    return author;
+
+    // Parallelize count queries for optimization
+    const [articleCount, collegeContentCount, examContentCount] =
+      await Promise.all([
+        this.articleRepository.count({
+          where: { author_id: id, is_active: true },
+        }),
+        this.collegeContentRepository.count({
+          where: { author_id: id, is_active: true },
+        }),
+        this.examContentRepository.count({
+          where: { author_id: id, is_active: true },
+        }),
+      ]);
+    const totalCount = articleCount + collegeContentCount + examContentCount;
+
+    // Add article_count to author object and return
+    return {
+      ...author,
+      article_count: {
+        article: articleCount,
+        college: collegeContentCount,
+        exam: examContentCount,
+      },
+    };
   }
 
   // POST
@@ -62,9 +91,9 @@ export class AuthorService {
     } catch (error) {
       if (
         error instanceof QueryFailedError &&
-        error.message.includes('duplicate key value violates unique constraint')
+        error.message.includes("duplicate key value violates unique constraint")
       ) {
-        throw new ConflictException('Author ID must be unique');
+        throw new ConflictException("Author ID must be unique");
       }
       throw error;
     }
@@ -73,7 +102,7 @@ export class AuthorService {
   // PATCH /authors/:id
   async update(
     id: number,
-    updateAuthorDto: UpdateAuthorDto,
+    updateAuthorDto: UpdateAuthorDto
   ): Promise<{ message: string; data?: Author }> {
     const author = await this.findOne(id);
     if (!author) {
@@ -96,70 +125,153 @@ export class AuthorService {
     return { message: `Author with ID ${id} deleted successfully` };
   }
 
-  async getAuthorData(authorId: number): Promise<any> {
+  async getAuthorTabData(
+    authorId: number,
+    type: "articles" | "exams" | "colleges",
+    page: number = 1,
+    limit: number = 10
+  ): Promise<any> {
     const author = await this.authorRepository.findOne({
-      where: { author_id: authorId },
+      where: { author_id: authorId, is_active: true },
+      select: ["author_id"],
     });
 
     if (!author) {
       throw new NotFoundException(`Author with ID ${authorId} not found`);
     }
 
-    const collegeContent = await this.collegeContentRepository
-    .createQueryBuilder('collegeContent')
-    .leftJoinAndSelect('collegeContent.college', 'college') 
-    .where('collegeContent.author_id = :authorId', { authorId })
-    .select([
-      'collegeContent.updated_at',
-      'collegeContent.img1_url',
-      'collegeContent.college_content_id',
-      'collegeContent.meta_desc',
-      'collegeContent.title',
-      'college.college_id',
-      'college.college_name',
-      'college.slug',
-    ])
-    .getMany();
+    const offset = (page - 1) * limit;
 
-  // Fetch all Exam Content and join with Exam data
-  const examContent = await this.examContentRepository
-    .createQueryBuilder('examContent')
-    .leftJoinAndSelect('examContent.exam', 'exam')
-    .where('examContent.author_id = :authorId', { authorId })
-    .select([
-      'examContent.updated_at',
-      'examContent.img1_url',
-      'examContent.exam_content_id',
-      'examContent.meta_desc',
-      'exam.exam_id',
-      'exam.exam_name',
-      'exam.slug',
-    ])
-    .getMany();
+    if (type === "colleges") {
+      const [collegeContent, total] = await this.collegeContentRepository
+        .createQueryBuilder("collegeContent")
+        .leftJoinAndSelect("collegeContent.college", "college")
+        .where("collegeContent.author_id = :authorId", { authorId })
+        .select([
+          "collegeContent.updated_at",
+          "collegeContent.img1_url",
+          "collegeContent.college_content_id",
+          "collegeContent.meta_desc",
+          "collegeContent.title",
+          "college.college_id",
+          "college.college_name",
+          "college.slug",
+        ])
+        .orderBy("collegeContent.updated_at", "DESC")
+        .skip(offset)
+        .take(limit)
+        .getManyAndCount();
 
-    const articles = await this.articleRepository.find({
-      where: { author_id: authorId },
-      select: ['updated_at', 'img1_url', 'article_id', 'meta_desc', 'title'],
-    });
+      // Standardize format
+      const formattedData = collegeContent.map((item) => ({
+        id: item.college_content_id,
+        title: item.title || item.college?.college_name || "College Content",
+        meta_desc: item.meta_desc,
+        img1_url: item.img1_url,
+        updated_at: item.updated_at,
+        category: "college",
+        slug: item.college?.slug,
+        entity_id: item.college?.college_id,
+        entity_name: item.college?.college_name,
+      }));
 
-    // Calculate article count
-    const articleCount = 
-      collegeContent.length + examContent.length + articles.length;
+      return {
+        type,
+        data: formattedData,
+        total,
+        page,
+        limit,
+        hasMore: page * limit < total,
+      };
+    }
 
-    return {
-      author_details: {
-        view_name: author.view_name,
-        author_id: author.author_id,
-        email: author.email,
-        image: author.image,
-        about: author.about,
-        article_count: articleCount,
-      },
-      content_written: {
-        exam_written: examContent,
-        college_written: collegeContent,
-        articles_written: articles,
-      },
-    };
+    if (type === "exams") {
+      const [examContent, total] = await this.examContentRepository
+        .createQueryBuilder("examContent")
+        .leftJoinAndSelect("examContent.exam", "exam")
+        .where("examContent.author_id = :authorId", { authorId })
+        .select([
+          "examContent.updated_at",
+          "examContent.img1_url",
+          "examContent.exam_content_id",
+          "examContent.meta_desc",
+          "examContent.topic_title",
+          "exam.exam_id",
+          "exam.exam_name",
+          "exam.slug",
+          "exam.exam_id",
+        ])
+        .orderBy("examContent.updated_at", "DESC")
+        .skip(offset)
+        .take(limit)
+        .getManyAndCount();
+
+      // Standardize format
+      const formattedData = examContent.map((item) => ({
+        id: item.exam?.exam_id,
+        title: item.topic_title || item.exam?.exam_name || "Exam Content",
+        meta_desc: item.meta_desc,
+        img1_url: item.img1_url,
+        updated_at: item.updated_at,
+        category: "exam",
+        slug: item.exam?.exam_name,
+        entity_id: item.exam?.exam_id,
+        entity_name: item.exam?.exam_name,
+      }));
+
+      return {
+        type,
+        data: formattedData,
+        total,
+        page,
+        limit,
+        hasMore: page * limit < total,
+      };
+    }
+
+    if (type === "articles") {
+      const [articles, total] = await this.articleRepository
+        .createQueryBuilder("article")
+        .where("article.author_id = :authorId", { authorId })
+        .andWhere("article.is_active = :isActive", { isActive: true })
+        .select([
+          "article.updated_at",
+          "article.img1_url",
+          "article.article_id",
+          "article.meta_desc",
+          "article.title",
+          "article.slug",
+        ])
+        .orderBy("article.updated_at", "DESC")
+        .skip(offset)
+        .take(limit)
+        .getManyAndCount();
+
+      // Standardize format
+      const formattedData = articles.map((item) => ({
+        id: item.article_id,
+        title: item.title || "Article",
+        meta_desc: item.meta_desc,
+        img1_url: item.img1_url,
+        updated_at: item.updated_at,
+        category: "article",
+        slug: item.slug,
+        entity_id: item.article_id,
+        entity_name: item.title,
+      }));
+
+      return {
+        type,
+        data: formattedData,
+        total,
+        page,
+        limit,
+        hasMore: page * limit < total,
+      };
+    }
+
+    throw new BadRequestException(
+      "Invalid type. Must be 'articles', 'exams', or 'colleges'."
+    );
   }
 }

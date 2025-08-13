@@ -276,6 +276,7 @@ export class CollegeWiseCourseService {
         this.collegeWiseCourseRepository.find({
           where: { college_id: collegeId },
           select: ["college_wise_course_id", "name"],
+          order: { kapp_score: "DESC" },
         }),
         this.collegeWiseCourseRepository.count({
           where: { college_id: collegeId },
