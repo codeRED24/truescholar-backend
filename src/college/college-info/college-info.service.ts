@@ -1988,11 +1988,17 @@ export class CollegeInfoService {
         throw new NotFoundException(`College info with ID ${id} not found`);
       }
 
-      const [courseCount, collegeContents, cityStateCountry, examSection] =
-        await Promise.all([
-          this.collegeWiseCourseRepository.count({ where: { college_id: id } }),
-          this.collegeContentRepository.query(
-            `
+      const [
+        courseCount,
+        collegeContents,
+        cityResult,
+        stateResult,
+        countryResult,
+        examSection,
+      ] = await Promise.all([
+        this.collegeWiseCourseRepository.count({ where: { college_id: id } }),
+        this.collegeContentRepository.query(
+          `
         SELECT 
           college_content_id,
           silos,
@@ -2007,29 +2013,23 @@ export class CollegeInfoService {
         WHERE 
           college_id = $1 AND is_active = true
         `,
-            [id]
-          ),
-          this.cityRepository.query(
-            `
-        SELECT 
-          c.city_id, c.name AS city_name,
-          s.state_id, s.name AS state_name,
-          co.country_id, co.name AS country_name
-        FROM 
-          city c
-        JOIN 
-          state s ON c.state_id = s.state_id
-        JOIN 
-          country co ON s.country_id = co.country_id
-        WHERE 
-          c.city_id = $1
-        `,
-            [collegeInfo.city_id]
-          ),
-          this.getExamSection(id),
-        ]);
+          [id]
+        ),
+        this.cityRepository.findOne({
+          where: { city_id: collegeInfo.city_id },
+        }),
+        this.stateRepository.findOne({
+          where: { state_id: collegeInfo.state_id },
+        }),
+        this.countryRepository.findOne({
+          where: { country_id: collegeInfo.country_id },
+        }),
+        this.getExamSection(id),
+      ]);
 
-      const { city_name, state_name, country_name } = cityStateCountry[0];
+      const city_name = cityResult ? cityResult.name : null;
+      const state_name = stateResult ? stateResult.name : null;
+      const country_name = countryResult ? countryResult.name : null;
       const authorIds = collegeInfo.collegeContents.map(
         (content) => content.author_id
       );
