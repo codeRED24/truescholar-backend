@@ -46,10 +46,32 @@ export class AuthorController {
   @ApiOperation({ summary: "Get all the content written by the author" })
   @ApiResponse({ status: 200, description: "Authors data" })
   @ApiResponse({ status: 404, description: "Author not found" })
-  async getAuthorData(@Param("id") id: number) {
-    return this.authorService.getAuthorData(id);
+  @ApiQuery({
+    name: "type",
+    required: true,
+    description: "Type of content: articles, exams, or colleges",
+    enum: ["articles", "exams", "colleges"],
+  })
+  @ApiQuery({
+    name: "page",
+    required: false,
+    description: "Page number for pagination",
+    type: Number,
+  })
+  @ApiQuery({
+    name: "limit",
+    required: false,
+    description: "Number of items per page",
+    type: Number,
+  })
+  async getAuthorData(
+    @Param("id") id: number,
+    @Query("type") type: "articles" | "exams" | "colleges",
+    @Query("page") page: number = 1,
+    @Query("limit") limit: number = 10
+  ) {
+    return this.authorService.getAuthorTabData(id, type, page, limit);
   }
-  
 
   @Post()
   @ApiOperation({ summary: "Create a new author" })
