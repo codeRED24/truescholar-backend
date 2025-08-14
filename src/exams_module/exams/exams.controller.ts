@@ -177,4 +177,26 @@ export class ExamsController {
   async getExamsByStream(@Param("streamId") streamId: number): Promise<any[]> {
     return this.examsService.findExamsByStream(streamId);
   }
+
+  @Get("/news/:id")
+  @ApiOperation({ summary: "Get all news for a specific exam" })
+  @ApiResponse({
+    status: 200,
+    description: "List of news articles for the exam.",
+  })
+  @ApiResponse({ status: 404, description: "Exam not found." })
+  async getExamNews(@Param("id") id: number): Promise<any> {
+    return this.examsService.getExamNews(id);
+  }
+
+  @Get("/news/individual/:newsId")
+  @ApiOperation({ summary: "Get individual news by news ID" })
+  @ApiResponse({
+    status: 200,
+    description: "Individual news article details.",
+  })
+  @ApiResponse({ status: 404, description: "News not found." })
+  async getExamNewsByNewsId(@Param("newsId") newsId: number): Promise<any> {
+    return this.examsService.getExamNewsByNewsId(newsId);
+  }
 }
