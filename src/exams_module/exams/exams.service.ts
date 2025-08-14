@@ -267,10 +267,10 @@ export class ExamsService {
       }
 
       // checker to validate that exam has question paper or not.
-      // const isQuestionPepersExists = await this.dataSource.query(
-      //   "SELECT question_paper_id FROM exam_question_papers WHERE exam_id = $1;",
-      //   [exam_id]
-      // );
+      const isQuestionPepersExists = await this.dataSource.query(
+        "SELECT question_paper_id FROM exam_question_papers WHERE exam_id = $1;",
+        [exam_id]
+      );
 
       // console.log({
       //   examInformation: exam[0],
@@ -288,12 +288,12 @@ export class ExamsService {
       return {
         examInformation: exam[0],
         examContent: latestContent.length > 0 ? latestContent[0] : null,
-        // distinctSilos: [
-        ...distinctSilos,
-        //   ...(isQuestionPepersExists && isQuestionPepersExists.length
-        //     ? [{ silos: "question_papers" }]
-        //     : []),
-        // ],
+        distinctSilos: [
+          ...distinctSilos,
+          ...(isQuestionPepersExists && isQuestionPepersExists.length
+            ? [{ silos: "question_papers" }]
+            : []),
+        ],
         ...(examDates && { examDates }),
         ...(questionPapers && { questionPapers }),
       };
@@ -849,5 +849,119 @@ export class ExamsService {
 
     // Return the exams list and filter_section
     return { exams: examListingDtos, filter_section: filterSection };
+  }
+
+  async getExamNews(examId: number): Promise<any> {
+    // First, get the exam information
+    const exam = await this.examRepository.findOne({
+      where: { exam_id: examId, is_active: "true" },
+      relations: ["stream"],
+    });
+
+    if (!exam) {
+      throw new NotFoundException(`Exam with ID ${examId} not found`);
+    }
+
+    // Fetch all news content for this exam
+    const newsContent = await this.examContentRepository.find({
+      where: { exam_id: examId, silos: "news", is_active: true },
+      order: { updated_at: "DESC" },
+      relations: ["author"],
+    });
+
+    // Transform the news content
+    const newsSection = newsContent.map((content) => ({
+      id: content.exam_content_id,
+      title: content.topic_title,
+      updated_at: content.updated_at,
+      meta_desc: content.meta_desc,
+      author_name: content.author?.author_name,
+      author_img: content.author?.image,
+      author_id: content.author_id,
+    }));
+
+    // Transform exam information
+    const examInformation = {
+      exam_id: exam.exam_id,
+      exam_name: exam.exam_name,
+      slug: exam.slug,
+      exam_description: exam.exam_description,
+      exam_logo: exam.exam_logo,
+      conducting_authority: exam.conducting_authority,
+      mode_of_exam: exam.mode_of_exam,
+      level_of_exam: exam.level_of_exam,
+      exam_fee_min: exam.exam_fee_min,
+      exam_fee_max: exam.exam_fee_max,
+      application_start_date: exam.application_start_date,
+      application_end_date: exam.application_end_date,
+      exam_date: exam.exam_date,
+      result_date: exam.result_date,
+      exam_shortname: exam.exam_shortname,
+    };
+
+    return {
+      examInformation,
+      news_section: newsSection,
+    };
+  }
+
+  async getExamNewsByNewsId(newsId: number): Promise<any> {
+    // Get the specific news content
+    const newsContent = await this.examContentRepository.findOne({
+      where: { exam_content_id: newsId, silos: "news", is_active: true },
+      relations: ["author", "exam"],
+    });
+
+    if (!newsContent) {
+      throw new NotFoundException(`News with ID ${newsId} not found`);
+    }
+
+    // Get the exam information
+    const exam = await this.examRepository.findOne({
+      where: { exam_id: newsContent.exam_id, is_active: "true" },
+      relations: ["stream"],
+    });
+
+    if (!exam) {
+      throw new NotFoundException(`Associated exam not found`);
+    }
+
+    // Transform exam information
+    const examInformation = {
+      exam_id: exam.exam_id,
+      exam_name: exam.exam_name,
+      slug: exam.slug,
+      exam_description: exam.exam_description,
+      exam_logo: exam.exam_logo,
+      conducting_authority: exam.conducting_authority,
+      mode_of_exam: exam.mode_of_exam,
+      level_of_exam: exam.level_of_exam,
+      exam_fee_min: exam.exam_fee_min,
+      exam_fee_max: exam.exam_fee_max,
+      application_start_date: exam.application_start_date,
+      application_end_date: exam.application_end_date,
+      exam_date: exam.exam_date,
+      result_date: exam.result_date,
+      exam_shortname: exam.exam_shortname,
+    };
+
+    // Transform the individual news content
+    const newsSection = [
+      {
+        id: newsContent.exam_content_id,
+        title: newsContent.topic_title,
+        updated_at: newsContent.updated_at,
+        description: newsContent.description,
+        meta_desc: newsContent.meta_desc,
+        author_name: newsContent.author?.author_name,
+        author_img: newsContent.author?.image,
+        author_id: newsContent.author_id,
+      },
+    ];
+
+    return {
+      examInformation,
+      news_section: newsSection,
+    };
   }
 }
