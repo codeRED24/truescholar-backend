@@ -145,7 +145,7 @@ export class AuthorService {
     if (type === "colleges") {
       const [collegeContent, total] = await this.collegeContentRepository
         .createQueryBuilder("collegeContent")
-        .leftJoinAndSelect("collegeContent.college", "college")
+        .leftJoinAndSelect("collegeContent.college", "college_info")
         .where("collegeContent.author_id = :authorId", { authorId })
         .select([
           "collegeContent.updated_at",
@@ -153,9 +153,10 @@ export class AuthorService {
           "collegeContent.college_content_id",
           "collegeContent.meta_desc",
           "collegeContent.title",
-          "college.college_id",
-          "college.college_name",
-          "college.slug",
+          "college_info.college_id",
+          "college_info.college_name",
+          "college_info.slug",
+          "collegeContent.silos",
         ])
         .orderBy("collegeContent.updated_at", "DESC")
         .skip(offset)
@@ -173,6 +174,7 @@ export class AuthorService {
         slug: item.college?.slug,
         entity_id: item.college?.college_id,
         entity_name: item.college?.college_name,
+        silos: item.silos,
       }));
 
       return {
@@ -200,6 +202,7 @@ export class AuthorService {
           "exam.exam_name",
           "exam.slug",
           "exam.exam_id",
+          "examContent.silos",
         ])
         .orderBy("examContent.updated_at", "DESC")
         .skip(offset)
@@ -217,6 +220,7 @@ export class AuthorService {
         slug: item.exam?.exam_name,
         entity_id: item.exam?.exam_id,
         entity_name: item.exam?.exam_name,
+        silos: item.silos,
       }));
 
       return {

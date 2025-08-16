@@ -1914,7 +1914,7 @@ export class CollegeInfoService {
           ...dynamicFields,
         },
         news_section: news,
-        highlight_section: [groupContentsBySilos("highlights")[0] || null],
+        highlight_section: [groupContentsBySilos("highlight")[0] || null],
         exam_section: examSection,
       };
 
@@ -2148,17 +2148,20 @@ export class CollegeInfoService {
     const baseUrl = `https://www.kollegeapply.com/colleges/${slug}`;
     const silosMapping = {
       info: `${baseUrl}`,
-      highlights: `${baseUrl}/highlights`,
+      highlight: `${baseUrl}/highlights`,
       courses: `${baseUrl}/courses`,
       fees: `${baseUrl}/fees`,
       admission: `${baseUrl}/admission-process`,
-      cutoff: `${baseUrl}/cutoff`,
-      placement: `${baseUrl}/placement`,
-      ranking: `${baseUrl}/ranking`,
+      cutoff: `${baseUrl}/cutoffs`,
+      placement: `${baseUrl}/placements`,
+      ranking: `${baseUrl}/rankings`,
       scholarship: `${baseUrl}/scholarship`,
-      facilities: `${baseUrl}/facilities`,
+      facility: `${baseUrl}/facilities`,
       faq: `${baseUrl}/faq`,
       news: `${baseUrl}/news`,
+      other: `${baseUrl}/others`,
+      result: `${baseUrl}/results`,
+      eligibility: `${baseUrl}/eligibility`,
     };
 
     // Initialize all fields as false
