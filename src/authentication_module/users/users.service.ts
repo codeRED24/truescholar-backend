@@ -6,10 +6,11 @@ import {
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, Like, QueryFailedError } from "typeorm";
 import { User } from "./users.entity";
+import { CreateUserDto } from "./dto/create-users.dto";
 import { UpdateUserDto } from "./dto/update-users.dto";
+import * as bcrypt from "bcrypt";
+import { classToPlain } from "class-transformer";
 import * as dotenv from "dotenv";
-import { OtpRequest } from "./user-otp.entity";
-import { RegisterUserDto } from "./dto/register-users.dto";
 
 dotenv.config();
 console.log("SMTP_USER:", process.env.SMTP_USER);
@@ -19,8 +20,7 @@ console.log("SMTP_PASSWORD:", process.env.SMTP_PASSWORD);
 export class UserService {
   constructor(
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-    private readonly otpRepository: Repository<OtpRequest>
+    private readonly userRepository: Repository<User>
   ) {}
 
   // GET ALL
@@ -28,7 +28,7 @@ export class UserService {
     if (username) {
       return this.userRepository.find({
         where: {
-          name: Like(`%${username}%`),
+          username: Like(`%${username}%`),
         },
       });
     }
@@ -37,31 +37,27 @@ export class UserService {
 
   // GET /users/:id
   async findOne(id: number): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { id } });
+    const user = await this.userRepository.findOne({
+      where: { kapp_uuid1: id },
+    });
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
     return user;
   }
 
-  // Create a new user record
-  async registerUser(createUserDto: RegisterUserDto): Promise<User> {
-    if (
-      !(await this.isOtpVerified(
-        createUserDto.email,
-        createUserDto.contact_number
-      ))
-    ) {
-    }
+  // POST (Sign Up)
+  async create(createUserDto: CreateUserDto): Promise<User> {
+    const { password, ...otherDetails } = createUserDto;
 
-    const payload: any = { ...createUserDto };
-    if (!payload.custom_code) {
-      const nameStr = (payload.name || "").replace(/\s+/g, "");
-      const prefix = nameStr ? nameStr.substring(0, 3) : "USR";
-      payload.custom_code = `${prefix}${Date.now()}`;
-    }
+    // Hashing the password
+    const salt = await bcrypt.genSalt();
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-    const user = this.userRepository.create(payload as User);
+    const user = this.userRepository.create({
+      ...otherDetails,
+      password: hashedPassword,
+    });
 
     try {
       return await this.userRepository.save(user);
@@ -70,12 +66,19 @@ export class UserService {
         error instanceof QueryFailedError &&
         error.message.includes("duplicate key value violates unique constraint")
       ) {
-        throw new ConflictException(
-          "custom_code or unique constraint violated"
-        );
+        throw new ConflictException("User ID or Username must be unique");
       }
       throw error;
     }
+  }
+  // Validate User by Username and Password
+  async validateUser(username: string, pass: string): Promise<User | null> {
+    const user = await this.userRepository.findOne({ where: { username } });
+
+    if (user && (await bcrypt.compare(pass, user.password))) {
+      return user;
+    }
+    return null;
   }
 
   // PATCH /users/:id
@@ -117,66 +120,9 @@ export class UserService {
     return user;
   }
 
-  // async updateOtp(id: number, otp: string): Promise<void> {
-  //   const user = await this.findOne(id);
-  //   user.otp = otp;
-  //   await this.userRepository.save(user);
-  // }
-
-  // async sendOtp(email: string, phone: string) {
-  //   const otp = crypto.randomInt(100000, 999999).toString(); // 6-digit OTP
-  //   const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 min expiry
-
-  //   const otpEntry = this.otpRepo.create({
-  //     email,
-  //     phone,
-  //     otp,
-  //     expires_at: expiresAt,
-  //   });
-  //   await this.otpRepo.save(otpEntry);
-
-  //   // TODO: integrate with Email + SMS providers here
-  //   // sendEmail(email, otp)
-  //   // sendSms(phone, otp)
-
-  //   return { message: "OTP sent successfully" };
-  // }
-
-  async verifyPhoneOtp(phone: string, phone_otp: string) {
-    // const otpEntry = await this.otpRepository.findOne({
-    //   where: { phone, phone_otp, phone_verified: false },
-    // });
-
-    // if (!otpEntry) throw new Error("Invalid OTP");
-    // if (otpEntry.expires_at < new Date()) throw new Error("OTP expired");
-
-    // otpEntry.phone_verified = true;
-    // await this.otpRepository.save(otpEntry);
-
-    if (phone_otp === "123456")
-      return { message: "Phone OTP verified successfully" };
-  }
-
-  async verifyEmailOtp(email: string, email_otp: string) {
-    // const otpEntry = await this.otpRepository.findOne({
-    //   where: { email, email_otp, email_verified: false },
-    // });
-
-    // if (!otpEntry) throw new Error("Invalid OTP");
-    // if (otpEntry.expires_at < new Date()) throw new Error("Email OTP expired");
-
-    // otpEntry.email_verified = true;
-    // await this.otpRepository.save(otpEntry);
-
-    if (email_otp === "123456")
-      return { message: "Email OTP verified successfully" };
-  }
-
-  async isOtpVerified(email: string, phone: string) {
-    const otpEntry = await this.otpRepository.findOne({
-      where: { email, phone, email_verified: true, phone_verified: true },
-      order: { created_at: "DESC" }, // latest verification
-    });
-    return !!otpEntry;
+  async updateOtp(id: number, otp: string): Promise<void> {
+    const user = await this.findOne(id);
+    user.otp = otp;
+    await this.userRepository.save(user);
   }
 }
