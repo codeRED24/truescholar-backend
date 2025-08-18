@@ -5,24 +5,24 @@ import {
   CreateDateColumn,
 } from "typeorm";
 
-@Entity()
+@Entity("otp_request")
 export class OtpRequest {
   @PrimaryGeneratedColumn("increment")
   id: number;
 
-  @Column()
+  @Column({ nullable: true })
   email?: string;
 
   @Column({ nullable: true })
   phone?: string;
 
-  @Column()
+  @Column({ nullable: true })
   email_otp?: string;
 
-  @Column()
+  @Column({ nullable: true })
   phone_otp?: string;
 
-  @Column({ type: "timestamp" })
+  @Column({ type: "timestamp", nullable: true })
   expires_at?: Date;
 
   @Column({ default: false })
