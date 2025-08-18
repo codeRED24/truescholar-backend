@@ -14,14 +14,14 @@ export class AuthService {
     private readonly userService: UserService
   ) {}
 
-  async validateUser(username: string, pass: string): Promise<any> {
-    const user = await this.userService.validateUser(username, pass);
-    if (user) {
-      const { password, ...result } = user;
-      return result;
-    }
-    throw new UnauthorizedException("Invalid credentials");
-  }
+  // async validateUser(username: string, pass: string): Promise<any> {
+  //   const user = await this.userService.validateUser(username, pass);
+  //   if (user) {
+  //     const { password, ...result } = user;
+  //     return result;
+  //   }
+  //   throw new UnauthorizedException("Invalid credentials");
+  // }
 
   async login(user: any) {
     const payload = { username: user.username, sub: user.kapp_uuid1 };
@@ -57,62 +57,63 @@ export class AuthService {
     await transporter.sendMail(mailOptions);
   }
 
-  async verifyOtp(email: string, otp: string): Promise<any> {
-    const user = await this.userService.findOneByEmail(email);
-    if (!user || user.otp !== otp) {
-      throw new UnauthorizedException("Invalid OTP");
-    }
+  // async verifyOtp(email: string, otp: string): Promise<any> {
+  //   const user = await this.userService.findOneByEmail(email);
+  //   if (!user || user.otp !== otp) {
+  //     throw new UnauthorizedException("Invalid OTP");
+  //   }
 
-    user.otp_verified = true;
-    await this.userService.update(user.kapp_uuid1, user);
-    return { message: "OTP verified successfully" };
-  }
+  //   user.otp_verified = true;
+  //   await this.userService.update(user.kapp_uuid1, user);
+  //   return { message: "OTP verified successfully" };
+  // }
 
-  async resendOtp(email: string, reason: string): Promise<any> {
-    const user = await this.userService.findOneByEmail(email);
-    if (!user) {
-      throw new NotFoundException("User not found");
-    }
+  // async resendOtp(email: string, reason: string): Promise<any> {
+  //   const user = await this.userService.findOneByEmail(email);
+  //   if (!user) {
+  //     throw new NotFoundException("User not found");
+  //   }
 
-    const otp = await this.generateOtp();
-    user.otp = otp;
-    await this.userService.update(user.kapp_uuid1, user);
+  //   const otp = await this.generateOtp();
+  //   user.otp = otp;
+  //   await this.userService.update(user.kapp_uuid1, user);
 
-    await this.sendOtpEmail(email, otp);
+  //   await this.sendOtpEmail(email, otp);
 
-    return { message: `OTP resent for ${reason}` };
-  }
-  async forgotPassword(email: string): Promise<any> {
-    const user = await this.userService.findOneByEmail(email);
-    if (!user) {
-      throw new NotFoundException("User not found");
-    }
+  //   return { message: `OTP resent for ${reason}` };
+  // }
 
-    const otp = await this.generateOtp();
-    user.otp = otp;
-    await this.userService.update(user.kapp_uuid1, user);
+  // async forgotPassword(email: string): Promise<any> {
+  //   const user = await this.userService.findOneByEmail(email);
+  //   if (!user) {
+  //     throw new NotFoundException("User not found");
+  //   }
 
-    await this.sendOtpEmail(email, otp);
+  //   const otp = await this.generateOtp();
+  //   user.otp = otp;
+  //   await this.userService.update(user.kapp_uuid1, user);
 
-    return { message: "OTP sent to reset password" };
-  }
+  //   await this.sendOtpEmail(email, otp);
 
-  async changePassword(
-    email: string,
-    oldPassword: string,
-    newPassword: string
-  ): Promise<any> {
-    const user = await this.userService.validateUser(email, oldPassword);
-    if (!user) {
-      throw new UnauthorizedException("Invalid credentials");
-    }
+  //   return { message: "OTP sent to reset password" };
+  // }
 
-    const salt = await bcrypt.genSalt();
-    const hashedPassword = await bcrypt.hash(newPassword, salt);
+  // async changePassword(
+  //   email: string,
+  //   oldPassword: string,
+  //   newPassword: string
+  // ): Promise<any> {
+  //   const user = await this.userService.validateUser(email, oldPassword);
+  //   if (!user) {
+  //     throw new UnauthorizedException("Invalid credentials");
+  //   }
 
-    user.password = hashedPassword;
-    await this.userService.update(user.kapp_uuid1, user);
+  //   const salt = await bcrypt.genSalt();
+  //   const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-    return { message: "Password changed successfully" };
-  }
+  //   user.password = hashedPassword;
+  //   await this.userService.update(user.kapp_uuid1, user);
+
+  //   return { message: "Password changed successfully" };
+  // }
 }
