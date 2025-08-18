@@ -42,7 +42,6 @@ export class AuthorService {
       return this.authorRepository.find({
         where: {
           author_name: Like(`%${author_name}%`),
-          is_active: true,
         },
       });
     }

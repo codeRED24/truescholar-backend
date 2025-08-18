@@ -17,7 +17,6 @@ import {
 } from "./dto/exam-listing.dto";
 import { ExamInformationDto } from "./dto/exam-info.dto";
 import { tryCatchWrapper } from "../../config/application.errorHandeler";
-import { ExamSitemapResponseDto } from "./dto/exam-sitemap-response.dto";
 
 @Injectable()
 export class ExamsService {
@@ -963,128 +962,6 @@ export class ExamsService {
     return {
       examInformation,
       news_section: newsSection,
-    };
-  }
-
-  // Get exam sitemap data with available silos
-  async getExamSitemapData(
-    page: number = 1,
-    limit: number = 1000
-  ): Promise<ExamSitemapResponseDto> {
-    const offset = (page - 1) * limit;
-
-    const query = `SELECT DISTINCT
-        e.exam_id,
-        e.slug,
-        e.exam_name
-      FROM 
-        exam e
-      JOIN exam_content ec ON e.exam_id = ec.exam_id
-      WHERE (e.is_active ILIKE 'true')
-      AND e.slug IS NOT NULL
-      AND ec.is_active = true   
-      ORDER BY e.exam_id
-      LIMIT $1 OFFSET $2
-    `;
-
-    const countQuery = `
-      SELECT COUNT(DISTINCT e.exam_id) as total
-      FROM exam e
-      JOIN exam_content ec ON e.exam_id = ec.exam_id
-      WHERE (e.is_active ILIKE 'true')
-         AND e.slug IS NOT NULL
-         AND ec.is_active = true
-    `;
-
-    const [exams, countResult] = await Promise.all([
-      this.dataSource.query(query, [limit, offset]),
-      this.dataSource.query(countQuery),
-    ]);
-
-    const total = parseInt(countResult[0]?.total || "0", 10);
-
-    // Get all exam IDs for batch queries
-    const examIds = exams.map((e) => e.exam_id);
-
-    if (examIds.length === 0) {
-      return { exams: [], total };
-    }
-
-    // Batch fetch all available silos and news articles
-    const [silosResults, newsResults] = await Promise.all([
-      this.dataSource.query(
-        `
-        SELECT exam_id, silos 
-        FROM exam_content 
-        WHERE exam_id = ANY($1)
-      `,
-        [examIds]
-      ),
-      this.dataSource.query(
-        `
-        SELECT ec.exam_id, ec.exam_content_id as news_id, ec.topic_title as title
-        FROM exam_content ec
-        WHERE ec.exam_id = ANY($1) 
-          AND ec.silos = 'news' 
-          AND ec.is_active = true
-        ORDER BY ec.exam_id, ec.updated_at DESC
-      `,
-        [examIds]
-      ),
-    ]);
-
-    // Create lookup maps for efficient access
-    const silosMap = new Map<number, Set<string>>();
-    silosResults.forEach((row) => {
-      if (!silosMap.has(row.exam_id)) {
-        silosMap.set(row.exam_id, new Set());
-      }
-      silosMap.get(row.exam_id)?.add(row.silos);
-    });
-
-    const newsMap = new Map<number, any[]>();
-    newsResults.forEach((row) => {
-      if (!newsMap.has(row.exam_id)) {
-        newsMap.set(row.exam_id, []);
-      }
-      // Create slug from title
-      const slug = row.title
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .trim();
-
-      newsMap.get(row.exam_id)?.push({
-        news_id: row.news_id,
-        title: row.title,
-        slug: `${slug}-${row.news_id}`,
-      });
-    });
-
-    // Process each exam
-    const examsWithSilos = exams.map((exam) => {
-      const examId = exam.exam_id;
-      const activeSilos = silosMap.get(examId) || new Set();
-      const newsArticles = newsMap.get(examId) || [];
-
-      // Convert silos to array and normalize naming
-      const availableSilos = Array.from(activeSilos).map((silo) => {
-        // Normalize silo names for URL consistency
-        return silo.replace(/_/g, "-");
-      });
-
-      return {
-        exam_id: exam.exam_id,
-        slug: exam.slug,
-        available_silos: availableSilos,
-        news_articles: newsArticles,
-      };
-    });
-
-    return {
-      exams: examsWithSilos,
-      total,
     };
   }
 }
