@@ -19,6 +19,9 @@ export class CollegeSearchService {
         { location: ILike(`%${query}%`), is_active: true },
       ],
       select: ["college_id", "college_name", "slug", "location", "kapp_rating"],
+      order: {
+        kapp_score: "DESC",
+      },
     });
 
     const colleges = results.map((college) => ({
