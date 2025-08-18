@@ -21,6 +21,7 @@ export class UserService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     @InjectRepository(OtpRequest)
+
     private readonly otpRepository: Repository<OtpRequest>
   ) {}
 
