@@ -4,105 +4,171 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-} from 'typeorm';
-import { Exclude } from 'class-transformer';
+  ManyToOne,
+  JoinColumn,
+} from "typeorm";
+
+import { CollegeInfo } from "../../college/college-info/college-info.entity";
+import { CollegeWiseCourse } from "../../college/college-wise-course/college_wise_course.entity";
+
+// @Entity()
+// export class User {
+//   @PrimaryGeneratedColumn("increment")
+//   kapp_uuid1: number;
+
+//   @CreateDateColumn({ type: "timestamp" })
+//   created_at: Date;
+
+//   @UpdateDateColumn({ type: "timestamp" })
+//   updated_at: Date;
+
+//   @Column({ unique: true })
+//   custom_id: string;
+
+//   @Column({ nullable: true })
+//   email?: string;
+
+//   @Column({ unique: true, nullable: true })
+//   username?: string;
+
+//   @Column()
+//   first_name: string;
+
+//   @Column({ nullable: true })
+//   last_name?: string;
+
+//   @Column({ nullable: true })
+//   priority?: string;
+
+//   @Column({ nullable: true })
+//   company?: string;
+
+//   @Column({ nullable: true })
+//   designation?: string;
+
+//   @Column({ nullable: true, type: "date" })
+//   date_of_birth?: string;
+
+//   @Column({ nullable: true })
+//   tenth_board?: string;
+
+//   @Column({ nullable: true, type: "decimal" })
+//   tenth_percentage?: string;
+
+//   @Column({ nullable: true, type: "int" })
+//   tenth_pass_year?: number;
+
+//   @Column({ nullable: true })
+//   twelth_board?: string;
+
+//   @Column({ nullable: true, type: "decimal" })
+//   twelth_percentage?: string;
+
+//   @Column({ nullable: true, type: "int" })
+//   twelth_pass_year?: number;
+
+//   @Column({ nullable: true })
+//   student_city?: string;
+
+//   @Column({ nullable: true })
+//   student_state?: string;
+
+//   @Column({ nullable: true })
+//   interest_incourse?: string;
+
+//   @Column({ nullable: true, type: "int" })
+//   year_intake?: number;
+
+//   @Column({ nullable: true })
+//   insti_name?: string;
+
+//   @Column({ nullable: true })
+//   insti_city?: string;
+
+//   @Column({ nullable: true })
+//   insti_designation?: string;
+
+//   @Column({ nullable: true })
+//   insti_purpose?: string;
+
+//   @Column({ nullable: true })
+//   user_team?: string;
+
+//   @Column({ nullable: true })
+//   mobile?: string;
+
+//   @Column({ nullable: true })
+//   role?: string;
+
+//   @Exclude()
+//   @Column()
+//   password: string;
+
+//   @Column({ default: false })
+//   otp_verified: boolean;
+
+//   @Column({ nullable: true })
+//   otp: string;
+// }
 
 @Entity()
 export class User {
-  @PrimaryGeneratedColumn('increment')
-  kapp_uuid1: number;
+  @PrimaryGeneratedColumn("increment")
+  id: number;
 
-  @CreateDateColumn({ type: 'timestamp' })
+  @CreateDateColumn({ type: "timestamp" })
   created_at: Date;
 
-  @UpdateDateColumn({ type: 'timestamp' })
+  @UpdateDateColumn({ type: "timestamp" })
   updated_at: Date;
 
   @Column({ unique: true })
-  custom_id: string;
+  custom_code: string;
+
+  @Column({ nullable: true })
+  name?: string;
 
   @Column({ nullable: true })
   email?: string;
 
-  @Column({ unique: true, nullable: true })
-  username?: string;
-
-  @Column()
-  first_name: string;
+  @Column({ nullable: true })
+  gender?: string;
 
   @Column({ nullable: true })
-  last_name?: string;
+  contact_number?: string;
 
   @Column({ nullable: true })
-  priority?: string;
+  country_of_origin?: string;
+
+  @Column({ nullable: true, type: "int" })
+  college_id?: number;
+
+  @Column({ nullable: true, type: "int" })
+  course_id?: number;
+
+  @ManyToOne(() => CollegeInfo, { nullable: true, onDelete: "SET NULL" })
+  @JoinColumn({ name: "college_id" })
+  college?: CollegeInfo;
+
+  @ManyToOne(() => CollegeWiseCourse, { nullable: true, onDelete: "SET NULL" })
+  @JoinColumn({ name: "course_id" })
+  collegeCourse?: CollegeWiseCourse;
 
   @Column({ nullable: true })
-  company?: string;
+  college_location?: string;
 
   @Column({ nullable: true })
-  designation?: string;
+  user_location?: string;
 
-  @Column({ nullable: true, type: 'date' })
-  date_of_birth?: string;
+  @Column({ nullable: true, type: "int" })
+  pass_year?: number;
 
-  @Column({ nullable: true })
-  tenth_board?: string;
+  @Column({ nullable: true, type: "date" })
+  dob?: string;
 
-  @Column({ nullable: true, type: 'decimal' })
-  tenth_percentage?: string;
-
-  @Column({ nullable: true, type: 'int' })
-  tenth_pass_year?: number;
+  @Column({ nullable: true, length: 50 })
+  user_type?: string;
 
   @Column({ nullable: true })
-  twelth_board?: string;
-
-  @Column({ nullable: true, type: 'decimal' })
-  twelth_percentage?: string;
-
-  @Column({ nullable: true, type: 'int' })
-  twelth_pass_year?: number;
-
-  @Column({ nullable: true })
-  student_city?: string;
-
-  @Column({ nullable: true })
-  student_state?: string;
-
-  @Column({ nullable: true })
-  interest_incourse?: string;
-
-  @Column({ nullable: true, type: 'int' })
-  year_intake?: number;
-
-  @Column({ nullable: true })
-  insti_name?: string;
-
-  @Column({ nullable: true })
-  insti_city?: string;
-
-  @Column({ nullable: true })
-  insti_designation?: string;
-
-  @Column({ nullable: true })
-  insti_purpose?: string;
-
-  @Column({ nullable: true })
-  user_team?: string;
-
-  @Column({ nullable: true })
-  mobile?: string;
-
-  @Column({ nullable: true })
-  role?: string;
-
-  @Exclude()
-  @Column()
-  password: string;
-
-  @Column({ default: false })
-  otp_verified: boolean;
-
-  @Column({ nullable: true })
-  otp: string;
+  user_img_url?: string;
 }
