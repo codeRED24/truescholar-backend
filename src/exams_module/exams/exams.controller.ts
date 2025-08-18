@@ -20,6 +20,7 @@ import { JwtAuthGuard } from "../../authentication_module/auth/jwt-auth.guard";
 import { ExamInfoDto } from "./dto/exam-info.dto";
 import { ExamListingDto } from "./dto/exam-listing.dto";
 import { CacheInterceptor } from "@nestjs/cache-manager";
+import { ExamSitemapResponseDto } from "./dto/exam-sitemap-response.dto";
 
 @ApiTags("exams")
 @UseInterceptors(ClassSerializerInterceptor)
@@ -100,6 +101,36 @@ export class ExamsController {
 
   @Get("/listing")
   @ApiOperation({ summary: "Get all exams with listing fields and filters" })
+  @ApiQuery({
+    name: "page",
+    required: false,
+    type: Number,
+    description: "Page number (default: 1)",
+  })
+  @ApiQuery({
+    name: "pageSize",
+    required: false,
+    type: Number,
+    description: "Items per page (default: 15)",
+  })
+  @ApiQuery({
+    name: "mode_of_exam",
+    required: false,
+    type: String,
+    description: "Filter by exam mode",
+  })
+  @ApiQuery({
+    name: "exam_level",
+    required: false,
+    type: String,
+    description: "Filter by exam level",
+  })
+  @ApiQuery({
+    name: "exam_streams",
+    required: false,
+    type: String,
+    description: "Filter by exam streams",
+  })
   async getAllExamsListing(
     @Query("page") page: number = 1,
     @Query("pageSize") limit: number = 15,
@@ -198,5 +229,31 @@ export class ExamsController {
   @ApiResponse({ status: 404, description: "News not found." })
   async getExamNewsByNewsId(@Param("newsId") newsId: number): Promise<any> {
     return this.examsService.getExamNewsByNewsId(newsId);
+  }
+
+  @Get("sitemap")
+  @ApiOperation({ summary: "Get exam sitemap data with available silos" })
+  @ApiQuery({
+    name: "page",
+    required: false,
+    description: "Page number",
+    schema: { default: 1 },
+  })
+  @ApiQuery({
+    name: "limit",
+    required: false,
+    description: "Number of exams to fetch",
+    schema: { default: 1000 },
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Exam sitemap data with available silos.",
+    type: ExamSitemapResponseDto,
+  })
+  async getExamSitemapData(
+    @Query("page") page: number = 1,
+    @Query("limit") limit: number = 1000
+  ): Promise<ExamSitemapResponseDto> {
+    return this.examsService.getExamSitemapData(page, limit);
   }
 }

@@ -20,6 +20,7 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(OtpRequest)
     private readonly otpRepository: Repository<OtpRequest>
   ) {}
 
@@ -108,7 +109,6 @@ export class UserService {
     };
   }
 
-  // Password change and everything related to the OTP
   async findOneByEmail(email: string): Promise<User> {
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {
