@@ -47,14 +47,6 @@ export class UserService {
 
   // Create a new user record
   async registerUser(createUserDto: RegisterUserDto): Promise<User> {
-    if (
-      !(await this.isOtpVerified(
-        createUserDto.email,
-        createUserDto.contact_number
-      ))
-    ) {
-    }
-
     const payload: any = { ...createUserDto };
     if (!payload.custom_code) {
       const nameStr = (payload.name || "").replace(/\s+/g, "");
