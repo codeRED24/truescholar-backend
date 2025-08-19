@@ -52,6 +52,7 @@ import { ScheduleModule } from "@nestjs/schedule";
 import { SitemapModule } from "./sitemaps/sitemap.module";
 import { AppDataSource } from "./data-source"; // Import DataSource
 import { FastifyMulterModule } from "@nest-lab/fastify-multer";
+import { ReviewsModule } from "./reviews/reviews.module";
 
 @Module({
   imports: [
@@ -117,6 +118,7 @@ import { FastifyMulterModule } from "@nest-lab/fastify-multer";
     // CmsModule,
     ScheduleModule.forRoot(),
     SitemapModule,
+    ReviewsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

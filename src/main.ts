@@ -53,15 +53,28 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true); // Allow the request
-      } else {
-        callback(new Error("Not allowed by CORS")); // Block the request
+      // allow requests with no origin (e.g., curl, mobile apps)
+      if (!origin) return callback(null, true);
+
+      // if wildcard is present, allow all origins
+      if (allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
+        return callback(null, true);
       }
+
+      return callback(new Error("Not allowed by CORS"));
     },
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+    methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
     credentials: true,
-    allowedHeaders: ["Authorization", "Content-Type"],
+    // include common headers that browsers send during preflight
+    allowedHeaders: [
+      "Authorization",
+      "Content-Type",
+      "Accept",
+      "Origin",
+      "X-Requested-With",
+      "Access-Control-Request-Headers",
+      "Access-Control-Request-Method",
+    ],
   });
 
   const port = process.env.PORT || 8001;
