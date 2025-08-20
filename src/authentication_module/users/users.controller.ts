@@ -56,4 +56,43 @@ export class UserController {
     const result = await this.userService.remove(id);
     return result;
   }
+
+  @Post("send-email-otp")
+  async sendEmailOtp(@Body() { email }: { email: string }) {
+    // For now, just return success message without actually sending
+    return { message: "Email OTP sent successfully" };
+  }
+
+  @Post("send-phone-otp")
+  async sendPhoneOtp(
+    @Body() { phone, countryCode }: { phone: string; countryCode?: string }
+  ) {
+    // For now, just return success message without actually sending
+    return { message: "Phone OTP sent successfully" };
+  }
+
+  @Post("verify-email-otp")
+  async verifyEmailOtp(
+    @Body() { email, email_otp }: { email: string; email_otp: string }
+  ) {
+    const result = await this.userService.verifyEmailOtp(email, email_otp);
+    return result;
+  }
+
+  @Post("verify-phone-otp")
+  async verifyPhoneOtp(
+    @Body() { phone, phone_otp }: { phone: string; phone_otp: string }
+  ) {
+    const result = await this.userService.verifyPhoneOtp(phone, phone_otp);
+    return result;
+  }
+
+  @Get("is-otp-verified")
+  async isOtpVerified(
+    @Query("email") email: string,
+    @Query("phone") phone: string
+  ) {
+    const verified = await this.userService.isOtpVerified(email, phone);
+    return { verified };
+  }
 }

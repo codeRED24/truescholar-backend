@@ -9,6 +9,6 @@ import { OtpRequest } from "./user-otp.entity";
   imports: [TypeOrmModule.forFeature([User, OtpRequest])],
   controllers: [UserController],
   providers: [UserService],
-  exports: [UserService],
+  exports: [UserService, TypeOrmModule],
 })
 export class UserModule {}
