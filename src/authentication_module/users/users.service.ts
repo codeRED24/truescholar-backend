@@ -26,16 +26,16 @@ export class UserService {
   ) {}
 
   // GET ALL
-  async findAll(username?: string): Promise<User[]> {
-    if (username) {
-      return this.userRepository.find({
-        where: {
-          name: Like(`%${username}%`),
-        },
-      });
-    }
-    return this.userRepository.find();
-  }
+  // async findAll(username?: string): Promise<User[]> {
+  //   if (username) {
+  //     return this.userRepository.find({
+  //       where: {
+  //         name: Like(`%${username}%`),
+  //       },
+  //     });
+  //   }
+  //   return this.userRepository.find();
+  // }
 
   // GET /users/:id
   async findOne(id: number): Promise<User> {
@@ -49,10 +49,30 @@ export class UserService {
   // Create a new user record
   async registerUser(createUserDto: RegisterUserDto): Promise<User> {
     const payload: any = { ...createUserDto };
+
+    // If custom_code not provided, generate one
     if (!payload.custom_code) {
       const nameStr = (payload.name || "").replace(/\s+/g, "");
-      const prefix = nameStr ? nameStr.substring(0, 3) : "USR";
+      const prefix = nameStr ? nameStr.substring(0, 3).toUpperCase() : "USR";
       payload.custom_code = `${prefix}${Date.now()}`;
+    }
+
+    // Check if a user already exists by email or phone. If yes, return only id and custom_code
+    if (payload.email || payload.phone) {
+      const whereClause: any = [];
+      if (payload.email) whereClause.push({ email: payload.email });
+      if (payload.phone) whereClause.push({ phone: payload.phone });
+
+      const existingUser = await this.userRepository.findOne({
+        where: whereClause,
+        select: ["id", "custom_code"],
+      });
+
+      if (existingUser) {
+        // Preserve return format: return an object shaped like User but with only id and custom_code
+        // Cast to any to satisfy return type Promise<User>
+        return existingUser as any;
+      }
     }
 
     const user = this.userRepository.create(payload as User);
