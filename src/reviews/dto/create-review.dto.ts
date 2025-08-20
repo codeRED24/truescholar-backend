@@ -3,9 +3,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  IsUrl,
   IsArray,
-  ArrayNotEmpty,
   IsIn,
   IsNumber,
   Min,
@@ -16,6 +14,26 @@ export class CreateReviewDto {
   @ApiPropertyOptional({ description: "User id who submits the review" })
   @IsInt()
   user_id: number;
+
+  @ApiProperty({ description: "College id (int)", required: false })
+  @IsOptional()
+  @IsNumber()
+  college_id?: number;
+
+  @ApiProperty({ description: "Course id (int)", required: false })
+  @IsOptional()
+  @IsNumber()
+  course_id?: number;
+
+  @ApiProperty({ description: "College location", required: false })
+  @IsOptional()
+  @IsString()
+  college_location?: string;
+
+  @ApiProperty({ description: "Passing year", required: false })
+  @IsOptional()
+  @IsNumber()
+  pass_year?: number;
 
   @ApiPropertyOptional({ description: "Profile picture url" })
   @IsOptional()

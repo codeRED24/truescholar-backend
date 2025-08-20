@@ -27,14 +27,14 @@ export class UserController {
     };
   }
 
-  @Get()
-  async findAll(@Query("username") username?: string) {
-    const users = await this.userService.findAll(username);
-    return {
-      message: "Users retrieved successfully",
-      data: users,
-    };
-  }
+  // @Get()
+  // async findAll(@Query("username") username?: string) {
+  //   const users = await this.userService.findAll(username);
+  //   return {
+  //     message: "Users retrieved successfully",
+  //     data: users,
+  //   };
+  // }
 
   @Get(":id")
   async findOne(@Param("id") id: number) {

@@ -4,7 +4,6 @@ import {
   IsOptional,
   IsString,
   IsEmail,
-  IsNumber,
   IsDateString,
 } from "class-validator";
 
@@ -39,33 +38,16 @@ export class RegisterUserDto {
   @IsString()
   country_of_origin?: string;
 
-  @ApiProperty({ description: "College id (int)", required: false })
-  @IsOptional()
-  @IsNumber()
-  college_id?: number;
-
-  @ApiProperty({ description: "Course id (int)", required: false })
-  @IsOptional()
-  @IsNumber()
-  course_id?: number;
-
-  @ApiProperty({ description: "College location", required: false })
-  @IsOptional()
-  @IsString()
-  college_location?: string;
-
   @ApiProperty({ description: "User location", required: false })
   @IsOptional()
   @IsString()
   user_location?: string;
 
-  @ApiProperty({ description: "Passing year", required: false })
-  @IsOptional()
-  @IsNumber()
-  pass_year?: number;
-
-  @ApiProperty({ description: "Date of birth", required: false })
-  @IsOptional()
+  @ApiProperty({
+    description: "Date of birth",
+    required: false,
+    example: "2000-01-01",
+  })
   @IsDateString()
   dob?: string;
 

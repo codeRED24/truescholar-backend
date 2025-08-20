@@ -17,7 +17,8 @@ export class ReviewsService {
   ) {}
 
   async create(createReviewDto: CreateReviewDto): Promise<any> {
-    const review = this.reviewRepository.create(createReviewDto);
+    const { profile_picture_url, ...cleanData } = createReviewDto;
+    const review = this.reviewRepository.create(cleanData);
 
     const savePromise = this.reviewRepository.save(review);
     const userPromise = createReviewDto.user_id
@@ -27,8 +28,21 @@ export class ReviewsService {
         })
       : Promise.resolve(null);
 
-    // Run both queries in parallel
-    const [savedReview, user] = await Promise.all([savePromise, userPromise]);
+    const updateUserPromise =
+      createReviewDto.user_id && createReviewDto.profile_picture_url
+        ? this.userRepository.update(
+            { id: createReviewDto.user_id },
+            { user_img_url: createReviewDto.profile_picture_url }
+          )
+        : Promise.resolve(null);
+
+    // Run all queries in parallel
+    const [savedReview, user, _] = await Promise.all([
+      savePromise,
+      userPromise,
+      updateUserPromise,
+    ]);
+
     return { ...savedReview, custom_code: user?.custom_code ?? null };
   }
 

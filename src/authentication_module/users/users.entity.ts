@@ -140,28 +140,8 @@ export class User {
   @Column({ nullable: true })
   country_of_origin?: string;
 
-  @Column({ nullable: true, type: "int" })
-  college_id?: number;
-
-  @Column({ nullable: true, type: "int" })
-  course_id?: number;
-
-  @ManyToOne(() => CollegeInfo, { nullable: true, onDelete: "SET NULL" })
-  @JoinColumn({ name: "college_id" })
-  college?: CollegeInfo;
-
-  @ManyToOne(() => CollegeWiseCourse, { nullable: true, onDelete: "SET NULL" })
-  @JoinColumn({ name: "course_id" })
-  collegeCourse?: CollegeWiseCourse;
-
-  @Column({ nullable: true })
-  college_location?: string;
-
   @Column({ nullable: true })
   user_location?: string;
-
-  @Column({ nullable: true, type: "int" })
-  pass_year?: number;
 
   @Column({ nullable: true, type: "date" })
   dob?: string;
