@@ -10,8 +10,19 @@ export class FileUploadService {
     region: process.env.AWS_REGION,
   });
 
-  async uploadFile(file: File, folder: string): Promise<string> {
-    const fileName = `1234567-${file.originalname}`;
+  async uploadFile(
+    file: File,
+    folder: string,
+    extraName?: number
+  ): Promise<string> {
+    // sanitize original name: replace whitespace with '-' and remove path segments
+    const safeOriginalName = file.originalname
+      .replace(/\s+/g, "-")
+      .split("/")
+      .pop();
+    const fileName = extraName
+      ? `${Date.now()}-${extraName}-${safeOriginalName}`
+      : `${Date.now()}-${safeOriginalName}`;
     const filePath = `${folder}/${fileName}`;
     const params = {
       Bucket: process.env.AWS_S3_BUCKET_NAME,
