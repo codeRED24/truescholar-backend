@@ -11,7 +11,7 @@ import {
 } from "class-validator";
 
 export class CreateReviewDto {
-  @ApiPropertyOptional({ description: "User id who submits the review" })
+  @ApiProperty({ description: "User id who submits the review" })
   @IsInt()
   user_id: number;
 
