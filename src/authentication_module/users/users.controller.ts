@@ -7,7 +7,9 @@ import {
   Param,
   Delete,
   Query,
+  Res,
 } from "@nestjs/common";
+import { Response } from "express";
 import { UserService } from "./users.service";
 import { UpdateUserDto } from "./dto/update-users.dto";
 import { ApiTags } from "@nestjs/swagger";
@@ -19,12 +21,23 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
-  async create(@Body() createUserDto: RegisterUserDto) {
-    const newUser = await this.userService.registerUser(createUserDto);
-    return {
-      message: "User created successfully",
-      data: newUser,
+  async create(
+    @Body() createUserDto: RegisterUserDto,
+    @Res({ passthrough: true }) res: Response
+  ) {
+    const { user, isExisting } =
+      await this.userService.registerUser(createUserDto);
+
+    const responseData = {
+      message: isExisting ? "User already exists" : "User created successfully",
+      data: user,
     };
+
+    // Set status code based on whether user is existing or new
+    const statusCode = isExisting ? 200 : 201;
+    res.status(statusCode);
+
+    return responseData;
   }
 
   // @Get()

@@ -38,6 +38,11 @@ export class RegisterUserDto {
   @IsString()
   country_of_origin?: string;
 
+  @ApiProperty({ description: "College roll number", required: false })
+  @IsOptional()
+  @IsString()
+  college_roll_number?: string;
+
   @ApiProperty({ description: "User location", required: false })
   @IsOptional()
   @IsString()

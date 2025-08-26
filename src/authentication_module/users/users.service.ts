@@ -47,7 +47,9 @@ export class UserService {
   }
 
   // Create a new user record
-  async registerUser(createUserDto: RegisterUserDto): Promise<User> {
+  async registerUser(
+    createUserDto: RegisterUserDto
+  ): Promise<{ user: User; isExisting: boolean }> {
     const payload: any = { ...createUserDto };
 
     // If custom_code not provided, generate one
@@ -58,10 +60,11 @@ export class UserService {
     }
 
     // Check if a user already exists by email or phone. If yes, return only id and custom_code
-    if (payload.email || payload.phone) {
+    if (payload.email || payload.contact_number) {
       const whereClause: any = [];
       if (payload.email) whereClause.push({ email: payload.email });
-      if (payload.phone) whereClause.push({ phone: payload.phone });
+      if (payload.contact_number)
+        whereClause.push({ contact_number: payload.contact_number });
 
       const existingUser = await this.userRepository.findOne({
         where: whereClause,
@@ -69,16 +72,16 @@ export class UserService {
       });
 
       if (existingUser) {
-        // Preserve return format: return an object shaped like User but with only id and custom_code
-        // Cast to any to satisfy return type Promise<User>
-        return existingUser as any;
+        // Return existing user with flag
+        return { user: existingUser as any, isExisting: true };
       }
     }
 
     const user = this.userRepository.create(payload as User);
 
     try {
-      return await this.userRepository.save(user);
+      const savedUser = await this.userRepository.save(user);
+      return { user: savedUser, isExisting: false };
     } catch (error) {
       if (
         error instanceof QueryFailedError &&
