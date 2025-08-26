@@ -8,6 +8,7 @@ import {
   IsNumber,
   Min,
   Max,
+  IsBoolean,
 } from "class-validator";
 
 export class CreateReviewDto {
@@ -65,56 +66,6 @@ export class CreateReviewDto {
   @IsString()
   review_title?: string;
 
-  // comments
-  @ApiPropertyOptional({ description: "Campus experience comment" })
-  @IsOptional()
-  @IsString()
-  campus_experience_comment?: string;
-
-  @ApiPropertyOptional({ description: "Placement journey comment" })
-  @IsOptional()
-  @IsString()
-  placement_journey_comment?: string;
-
-  @ApiPropertyOptional({ description: "Academic experience comment" })
-  @IsOptional()
-  @IsString()
-  academic_experience_comment?: string;
-
-  @ApiPropertyOptional({ description: "College admission comment" })
-  @IsOptional()
-  @IsString()
-  college_admission_comment?: string;
-
-  // ratings 1-5
-  @ApiPropertyOptional({ description: "Campus experience rating (1-5)" })
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  @Max(5)
-  campus_experience_rating?: number;
-
-  @ApiPropertyOptional({ description: "Placement journey rating (1-5)" })
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  @Max(5)
-  placement_journey_rating?: number;
-
-  @ApiPropertyOptional({ description: "Academic experience rating (1-5)" })
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  @Max(5)
-  academic_experience_rating?: number;
-
-  @ApiPropertyOptional({ description: "College admission rating (1-5)" })
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  @Max(5)
-  college_admission_rating?: number;
-
   // college images
   @ApiPropertyOptional({
     description: "Array of college image urls",
@@ -139,4 +90,137 @@ export class CreateReviewDto {
   @IsOptional()
   @IsIn(["pending", "processed", "paid"])
   reward_status?: "pending" | "processed" | "paid";
+
+  // Financial Information
+  @ApiPropertyOptional({ description: "Annual tuition fees" })
+  @IsOptional()
+  @IsNumber()
+  annual_tuition_fees?: number;
+
+  @ApiPropertyOptional({ description: "Hostel fees" })
+  @IsOptional()
+  @IsNumber()
+  hostel_fees?: number;
+
+  @ApiPropertyOptional({ description: "Other college charges" })
+  @IsOptional()
+  @IsNumber()
+  other_charges?: number;
+
+  @ApiPropertyOptional({ description: "Whether scholarship was availed" })
+  @IsOptional()
+  @IsBoolean()
+  scholarship_availed?: boolean;
+
+  @ApiPropertyOptional({ description: "Scholarship name" })
+  @IsOptional()
+  @IsString()
+  scholarship_name?: string;
+
+  @ApiPropertyOptional({ description: "Scholarship amount" })
+  @IsOptional()
+  @IsNumber()
+  scholarship_amount?: number;
+
+  // Detailed Feedback Fields
+  @ApiPropertyOptional({ description: "Overall satisfaction rating (1-5)" })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(5)
+  overall_satisfaction_rating?: number;
+
+  @ApiPropertyOptional({ description: "Overall experience feedback" })
+  @IsOptional()
+  @IsString()
+  overall_experience_feedback?: string;
+
+  @ApiPropertyOptional({ description: "Teaching quality rating (1-5)" })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(5)
+  teaching_quality_rating?: number;
+
+  @ApiPropertyOptional({ description: "Teaching quality feedback" })
+  @IsOptional()
+  @IsString()
+  teaching_quality_feedback?: string;
+
+  @ApiPropertyOptional({ description: "Infrastructure rating (1-5)" })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(5)
+  infrastructure_rating?: number;
+
+  @ApiPropertyOptional({ description: "Infrastructure feedback" })
+  @IsOptional()
+  @IsString()
+  infrastructure_feedback?: string;
+
+  @ApiPropertyOptional({ description: "Library rating (1-5)" })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(5)
+  library_rating?: number;
+
+  @ApiPropertyOptional({ description: "Library feedback" })
+  @IsOptional()
+  @IsString()
+  library_feedback?: string;
+
+  @ApiPropertyOptional({ description: "Placement support rating (1-5)" })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(5)
+  placement_support_rating?: number;
+
+  @ApiPropertyOptional({ description: "Placement support feedback" })
+  @IsOptional()
+  @IsString()
+  placement_support_feedback?: string;
+
+  @ApiPropertyOptional({ description: "Administrative support rating (1-5)" })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(5)
+  administrative_support_rating?: number;
+
+  @ApiPropertyOptional({ description: "Administrative support feedback" })
+  @IsOptional()
+  @IsString()
+  administrative_support_feedback?: string;
+
+  @ApiPropertyOptional({ description: "Hostel rating (1-5)" })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(5)
+  hostel_rating?: number;
+
+  @ApiPropertyOptional({ description: "Hostel feedback" })
+  @IsOptional()
+  @IsString()
+  hostel_feedback?: string;
+
+  @ApiPropertyOptional({ description: "Extracurricular rating (1-5)" })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(5)
+  extracurricular_rating?: number;
+
+  @ApiPropertyOptional({ description: "Extracurricular feedback" })
+  @IsOptional()
+  @IsString()
+  extracurricular_feedback?: string;
+
+  @ApiPropertyOptional({ description: "Improvement suggestions" })
+  @IsOptional()
+  @IsString()
+  improvement_suggestions?: string;
 }

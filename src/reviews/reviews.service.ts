@@ -89,9 +89,8 @@ export class ReviewsService {
       createReviewDto.user_id = req.user.userId;
     }
 
-    // Original create logic
-    const { profile_picture_url, ...cleanData } = createReviewDto;
-    const review = this.reviewRepository.create(cleanData);
+    // Create logic - include all fields from DTO
+    const review = this.reviewRepository.create(createReviewDto);
 
     const savePromise = this.reviewRepository.save(review);
     const userPromise = createReviewDto.user_id
