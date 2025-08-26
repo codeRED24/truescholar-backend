@@ -141,6 +141,9 @@ export class User {
   country_of_origin?: string;
 
   @Column({ nullable: true })
+  college_roll_number?: string;
+
+  @Column({ nullable: true })
   user_location?: string;
 
   @Column({ nullable: true, type: "date" })

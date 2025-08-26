@@ -60,35 +60,80 @@ export class Review {
   @Column({ length: 200, nullable: true })
   review_title?: string;
 
-  // Ratings (1-5 scale)
-  @Column({ type: "int", nullable: true })
-  campus_experience_rating?: number;
-
-  @Column({ type: "int", nullable: true })
-  placement_journey_rating?: number;
-
-  @Column({ type: "int", nullable: true })
-  academic_experience_rating?: number;
-
-  @Column({ type: "int", nullable: true })
-  college_admission_rating?: number;
-
-  // Comments
-  @Column({ type: "text", nullable: true })
-  campus_experience_comment?: string;
-
-  @Column({ type: "text", nullable: true })
-  placement_journey_comment?: string;
-
-  @Column({ type: "text", nullable: true })
-  academic_experience_comment?: string;
-
-  @Column({ type: "text", nullable: true })
-  college_admission_comment?: string;
-
   // College Images
   @Column("text", { array: true, nullable: true })
   college_images_urls?: string[];
+
+  // Financial Information
+  @Column({ type: "decimal", precision: 10, scale: 2, nullable: true })
+  annual_tuition_fees?: number;
+
+  @Column({ type: "decimal", precision: 10, scale: 2, nullable: true })
+  hostel_fees?: number;
+
+  @Column({ type: "decimal", precision: 10, scale: 2, nullable: true })
+  other_charges?: number;
+
+  @Column({ type: "boolean", nullable: true })
+  scholarship_availed?: boolean;
+
+  @Column({ type: "varchar", length: 255, nullable: true })
+  scholarship_name?: string;
+
+  @Column({ type: "decimal", precision: 10, scale: 2, nullable: true })
+  scholarship_amount?: number;
+
+  // Detailed Feedback Fields
+  @Column({ type: "int", nullable: true })
+  overall_satisfaction_rating?: number;
+
+  @Column({ type: "text", nullable: true })
+  overall_experience_feedback?: string;
+
+  @Column({ type: "int", nullable: true })
+  teaching_quality_rating?: number;
+
+  @Column({ type: "text", nullable: true })
+  teaching_quality_feedback?: string;
+
+  @Column({ type: "int", nullable: true })
+  infrastructure_rating?: number;
+
+  @Column({ type: "text", nullable: true })
+  infrastructure_feedback?: string;
+
+  @Column({ type: "int", nullable: true })
+  library_rating?: number;
+
+  @Column({ type: "text", nullable: true })
+  library_feedback?: string;
+
+  @Column({ type: "int", nullable: true })
+  placement_support_rating?: number;
+
+  @Column({ type: "text", nullable: true })
+  placement_support_feedback?: string;
+
+  @Column({ type: "int", nullable: true })
+  administrative_support_rating?: number;
+
+  @Column({ type: "text", nullable: true })
+  administrative_support_feedback?: string;
+
+  @Column({ type: "int", nullable: true })
+  hostel_rating?: number;
+
+  @Column({ type: "text", nullable: true })
+  hostel_feedback?: string;
+
+  @Column({ type: "int", nullable: true })
+  extracurricular_rating?: number;
+
+  @Column({ type: "text", nullable: true })
+  extracurricular_feedback?: string;
+
+  @Column({ type: "text", nullable: true })
+  improvement_suggestions?: string;
 
   // Status tracking
   @Column({
