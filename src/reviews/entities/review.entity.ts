@@ -9,8 +9,8 @@ import {
   Unique,
 } from "typeorm";
 import { User } from "../../authentication_module/users/users.entity";
-import { CollegeInfo } from "src/college/college-info/college-info.entity";
-import { CollegeWiseCourse } from "src/college/college-wise-course/college_wise_course.entity";
+import { CollegeInfo } from "../../college/college-info/college-info.entity";
+import { CollegeWiseCourse } from "../../college/college-wise-course/college_wise_course.entity";
 
 @Entity("reviews")
 // @Unique(["email", "college_name"])
