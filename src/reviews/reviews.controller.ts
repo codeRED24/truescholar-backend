@@ -38,7 +38,6 @@ export class ReviewsController {
       type: "object",
       properties: {
         user_id: { type: "number" },
-        profile_picture: { type: "string", format: "binary" },
         degree_certificate: { type: "string", format: "binary" },
         mark_sheet: { type: "string", format: "binary" },
         college_images: {
@@ -87,8 +86,17 @@ export class ReviewsController {
     @UploadedFiles() files: Array<Express.Multer.File>,
     @Req() req: any
   ) {
-    // Delegate file handling and creation to service
-    return this.reviewsService.create(createReviewDto, files, req);
+    try {
+      // Delegate file handling and creation to service
+      const result = await this.reviewsService.create(
+        createReviewDto,
+        files,
+        req
+      );
+      return result;
+    } catch (error) {
+      throw error;
+    }
   }
 
   @Get()

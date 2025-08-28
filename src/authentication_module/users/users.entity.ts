@@ -10,6 +10,7 @@ import {
 
 import { CollegeInfo } from "../../college/college-info/college-info.entity";
 import { CollegeWiseCourse } from "../../college/college-wise-course/college_wise_course.entity";
+import { Exclude } from "class-transformer";
 
 // @Entity()
 // export class User {
@@ -154,4 +155,8 @@ export class User {
 
   @Column({ nullable: true })
   user_img_url?: string;
+
+  @Exclude()
+  @Column({ nullable: true })
+  password?: string;
 }
