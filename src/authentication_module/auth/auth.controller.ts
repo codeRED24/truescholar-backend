@@ -57,7 +57,7 @@ export class AuthController {
       newPassword: string;
     }
   ) {
-    return this.authService.changePassword(email, newPassword, oldPassword);
+    return this.authService.changePassword(email, oldPassword, newPassword);
   }
 
   @Post("forgot-password")
