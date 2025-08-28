@@ -7,12 +7,15 @@ import { AuthController } from "./auth.controller";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { LocalStrategy } from "./local.strategy";
 import { UserModule } from "../../authentication_module/users/users.module";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { User } from "../users/users.entity";
 
 @Module({
   imports: [
     UserModule,
     ConfigModule,
     PassportModule,
+    TypeOrmModule.forFeature([User]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
