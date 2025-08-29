@@ -54,6 +54,26 @@ export class AuthService {
       }
     }
 
+    // Handle referral code if provided
+    if (payload.referred_by) {
+      const referrer = await this.userRepository.findOne({
+        where: { custom_code: payload.referred_by },
+        select: ["id", "custom_code"],
+      });
+
+      if (referrer) {
+        // Check if user is trying to refer themselves
+        if (
+          payload.custom_code &&
+          payload.custom_code === payload.referred_by
+        ) {
+          throw new Error("You cannot use your own referral code");
+        }
+        payload.referrer_id = referrer.id;
+      }
+      // If referrer not found, we still create the user but without referrer_id
+    }
+
     // Hash password if provided
     if (payload.password) {
       const salt = await bcrypt.genSalt();

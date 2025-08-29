@@ -160,4 +160,17 @@ export class User {
   @Exclude()
   @Column({ nullable: true })
   password?: string;
+
+  @Column({ nullable: true })
+  referrer_id?: number;
+
+  @Column({ nullable: true })
+  referred_by?: string;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: "referrer_id" })
+  referrer?: User;
+
+  @Column({ nullable: true })
+  college?: string;
 }
