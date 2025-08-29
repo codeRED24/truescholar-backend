@@ -72,4 +72,14 @@ export class RegisterUserDto {
   @IsString()
   @MinLength(6, { message: "Password must be at least 6 characters long" })
   password?: string;
+
+  @ApiProperty({ description: "Referral code", required: false })
+  @IsOptional()
+  @IsString()
+  referred_by?: string;
+
+  @ApiProperty({ description: "College name", required: false })
+  @IsOptional()
+  @IsString()
+  college?: string;
 }
