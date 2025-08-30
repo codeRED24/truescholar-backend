@@ -3,7 +3,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { ReelsService } from "./reels.service";
 import { ReelsController } from "./reels.controller";
 import { Reel } from "./entities/reel.entity";
-import { FileUploadService } from "src/utils/file-upload/fileUpload.service";
+import { FileUploadService } from "../utils/file-upload/fileUpload.service";
 
 @Module({
   imports: [TypeOrmModule.forFeature([Reel])],

@@ -1,5 +1,5 @@
-import { User } from "src/authentication_module/users/users.entity";
-import { CollegeInfo } from "src/college/college-info/college-info.entity";
+import { User } from "../../authentication_module/users/users.entity";
+import { CollegeInfo } from "../../college/college-info/college-info.entity";
 import {
   Column,
   PrimaryGeneratedColumn,
