@@ -7,13 +7,12 @@ import { JwtCmsStrategy } from "./jwt.cmsStrategy";
 import { Logs } from "../cms-logs/logs.entity";
 import { LogsModule } from "../cms-logs/logs.module";
 import { LogsService } from "../cms-logs/logs.service";
+import { JwtService } from "@nestjs/jwt";
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([CmsUser, Logs]), LogsModule,
-  ],
+  imports: [TypeOrmModule.forFeature([CmsUser, Logs]), LogsModule],
   providers: [AuthService, JwtCmsStrategy, LogsService],
   controllers: [AuthController],
-  exports: [TypeOrmModule],
+  exports: [TypeOrmModule, JwtService],
 })
 export class CmsAuthModule {}

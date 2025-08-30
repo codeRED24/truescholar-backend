@@ -10,6 +10,7 @@ import {
 
 import { CollegeInfo } from "../../college/college-info/college-info.entity";
 import { CollegeWiseCourse } from "../../college/college-wise-course/college_wise_course.entity";
+import { Exclude } from "class-transformer";
 
 // @Entity()
 // export class User {
@@ -155,4 +156,21 @@ export class User {
 
   @Column({ nullable: true })
   user_img_url?: string;
+
+  @Exclude()
+  @Column({ nullable: true })
+  password?: string;
+
+  @Column({ nullable: true })
+  referrer_id?: number;
+
+  @Column({ nullable: true })
+  referred_by?: string;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: "referrer_id" })
+  referrer?: User;
+
+  @Column({ nullable: true })
+  college?: string;
 }

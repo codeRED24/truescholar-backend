@@ -10,19 +10,23 @@ import {
   Max,
   IsBoolean,
 } from "class-validator";
+import { Transform } from "class-transformer";
 
 export class CreateReviewDto {
   @ApiProperty({ description: "User id who submits the review" })
+  @Transform(({ value }) => parseInt(value))
   @IsInt()
   user_id: number;
 
   @ApiProperty({ description: "College id (int)", required: false })
   @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value) : undefined))
   @IsNumber()
   college_id?: number;
 
   @ApiProperty({ description: "Course id (int)", required: false })
   @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value) : undefined))
   @IsNumber()
   course_id?: number;
 
@@ -33,13 +37,39 @@ export class CreateReviewDto {
 
   @ApiProperty({ description: "Passing year", required: false })
   @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value) : undefined))
   @IsNumber()
   pass_year?: number;
 
-  @ApiPropertyOptional({ description: "Profile picture url" })
+  @ApiPropertyOptional({ description: "Anonymous review flag" })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === "true") return true;
+    if (value === "false") return false;
+    return value;
+  })
+  @IsBoolean()
+  is_anonymous?: boolean;
+
+  @ApiPropertyOptional({ description: "Student stream/department" })
   @IsOptional()
   @IsString()
-  profile_picture_url?: string;
+  stream?: string;
+
+  @ApiPropertyOptional({ description: "Year of study" })
+  @IsOptional()
+  @IsString()
+  year_of_study?: string;
+
+  @ApiPropertyOptional({ description: "Mode of study" })
+  @IsOptional()
+  @IsString()
+  mode_of_study?: string;
+
+  @ApiPropertyOptional({ description: "Current semester" })
+  @IsOptional()
+  @IsString()
+  current_semester?: string;
 
   @ApiPropertyOptional({ description: "Linkedin profile url" })
   @IsOptional()
@@ -94,21 +124,29 @@ export class CreateReviewDto {
   // Financial Information
   @ApiPropertyOptional({ description: "Annual tuition fees" })
   @IsOptional()
+  @Transform(({ value }) => (value ? parseFloat(value) : undefined))
   @IsNumber()
   annual_tuition_fees?: number;
 
   @ApiPropertyOptional({ description: "Hostel fees" })
   @IsOptional()
+  @Transform(({ value }) => (value ? parseFloat(value) : undefined))
   @IsNumber()
   hostel_fees?: number;
 
   @ApiPropertyOptional({ description: "Other college charges" })
   @IsOptional()
+  @Transform(({ value }) => (value ? parseFloat(value) : undefined))
   @IsNumber()
   other_charges?: number;
 
   @ApiPropertyOptional({ description: "Whether scholarship was availed" })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === "true") return true;
+    if (value === "false") return false;
+    return value;
+  })
   @IsBoolean()
   scholarship_availed?: boolean;
 
@@ -119,12 +157,14 @@ export class CreateReviewDto {
 
   @ApiPropertyOptional({ description: "Scholarship amount" })
   @IsOptional()
+  @Transform(({ value }) => (value ? parseFloat(value) : undefined))
   @IsNumber()
   scholarship_amount?: number;
 
   // Detailed Feedback Fields
   @ApiPropertyOptional({ description: "Overall satisfaction rating (1-5)" })
   @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value) : undefined))
   @IsNumber()
   @Min(1)
   @Max(5)
@@ -137,6 +177,7 @@ export class CreateReviewDto {
 
   @ApiPropertyOptional({ description: "Teaching quality rating (1-5)" })
   @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value) : undefined))
   @IsNumber()
   @Min(1)
   @Max(5)
@@ -149,6 +190,7 @@ export class CreateReviewDto {
 
   @ApiPropertyOptional({ description: "Infrastructure rating (1-5)" })
   @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value) : undefined))
   @IsNumber()
   @Min(1)
   @Max(5)
@@ -161,6 +203,7 @@ export class CreateReviewDto {
 
   @ApiPropertyOptional({ description: "Library rating (1-5)" })
   @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value) : undefined))
   @IsNumber()
   @Min(1)
   @Max(5)
@@ -173,6 +216,7 @@ export class CreateReviewDto {
 
   @ApiPropertyOptional({ description: "Placement support rating (1-5)" })
   @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value) : undefined))
   @IsNumber()
   @Min(1)
   @Max(5)
@@ -185,6 +229,7 @@ export class CreateReviewDto {
 
   @ApiPropertyOptional({ description: "Administrative support rating (1-5)" })
   @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value) : undefined))
   @IsNumber()
   @Min(1)
   @Max(5)
@@ -197,6 +242,7 @@ export class CreateReviewDto {
 
   @ApiPropertyOptional({ description: "Hostel rating (1-5)" })
   @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value) : undefined))
   @IsNumber()
   @Min(1)
   @Max(5)
@@ -209,6 +255,7 @@ export class CreateReviewDto {
 
   @ApiPropertyOptional({ description: "Extracurricular rating (1-5)" })
   @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value) : undefined))
   @IsNumber()
   @Min(1)
   @Max(5)

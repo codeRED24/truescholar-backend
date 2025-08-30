@@ -5,6 +5,7 @@ import {
   IsString,
   IsEmail,
   IsDateString,
+  MinLength,
 } from "class-validator";
 
 export class RegisterUserDto {
@@ -65,4 +66,20 @@ export class RegisterUserDto {
   @IsOptional()
   @IsString()
   user_img_url?: string;
+
+  @ApiProperty({ description: "User password", required: false })
+  @IsOptional()
+  @IsString()
+  @MinLength(6, { message: "Password must be at least 6 characters long" })
+  password?: string;
+
+  @ApiProperty({ description: "Referral code", required: false })
+  @IsOptional()
+  @IsString()
+  referred_by?: string;
+
+  @ApiProperty({ description: "College name", required: false })
+  @IsOptional()
+  @IsString()
+  college?: string;
 }
