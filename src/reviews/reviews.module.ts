@@ -3,7 +3,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { ReviewsService } from "./reviews.service";
 import { ReviewsController } from "./reviews.controller";
 import { Review } from "./entities/review.entity";
-import { User } from "src/authentication_module/users/users.entity";
+import { User } from "../authentication_module/users/users.entity";
 import { UserModule } from "../authentication_module/users/users.module";
 import { FileUploadService } from "../utils/file-upload/fileUpload.service";
 
