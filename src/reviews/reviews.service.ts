@@ -108,17 +108,72 @@ export class ReviewsService {
     skip = 0,
     take = 25
   ): Promise<{ data: Review[]; total: number }> {
-    const where: any = {};
-    if (status) where.status = status;
+    const queryBuilder = this.reviewRepository.createQueryBuilder("review");
 
-    const [data, total] = await this.reviewRepository.findAndCount({
-      where,
-      skip,
-      take,
-      order: { created_at: "DESC" },
-    });
+    queryBuilder
+      .leftJoinAndSelect("review.college", "college")
+      .leftJoinAndSelect("review.collegeCourse", "collegeCourse")
+      .orderBy("review.created_at", "DESC")
+      .skip(skip)
+      .take(take);
 
-    return { data, total };
+    if (status) {
+      queryBuilder.where("review.status = :status", { status });
+    }
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    const transformedData = data.map((review) => ({
+      ...review,
+      college: review.college
+        ? { college_name: review.college.college_name }
+        : null,
+      collegeCourse: review.collegeCourse
+        ? { name: review.collegeCourse.name }
+        : null,
+    }));
+
+    return { data: transformedData as any, total };
+  }
+
+  async findAllByUser(
+    userId: number,
+    status?: string,
+    skip = 0,
+    take = 25
+  ): Promise<{ data: Review[]; total: number }> {
+    const queryBuilder = this.reviewRepository.createQueryBuilder("review");
+
+    queryBuilder
+      .leftJoinAndSelect("review.college", "college")
+      .leftJoinAndSelect("review.collegeCourse", "collegeCourse")
+      .orderBy("review.created_at", "DESC")
+      .skip(skip)
+      .take(take);
+
+    // Add condition for user_id
+    queryBuilder.where("review.user_id = :userId", { userId });
+
+    if (status) {
+      queryBuilder.andWhere("review.status = :status", { status });
+    }
+
+    const [reviews, total] = await queryBuilder.getManyAndCount();
+
+    const transformedData = reviews.map((review) => ({
+      review_title: review.review_title,
+      overall_experience_feedback: review.overall_experience_feedback,
+      created_at: review.created_at,
+      id: review.id,
+      college: review.college
+        ? { college_name: review.college.college_name }
+        : null,
+      collegeCourse: review.collegeCourse
+        ? { name: review.collegeCourse.name }
+        : null,
+    }));
+
+    return { data: transformedData as any, total };
   }
 
   async findOne(id: number): Promise<Review | null> {
