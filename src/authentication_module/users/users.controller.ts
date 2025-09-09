@@ -1,22 +1,22 @@
 import {
   Controller,
   Get,
-  Post,
   Body,
   Patch,
   Param,
   Delete,
-  Query,
-  Res,
+  UseInterceptors,
+  UploadedFiles,
+  ClassSerializerInterceptor,
 } from "@nestjs/common";
-import { Response } from "express";
 import { UserService } from "./users.service";
 import { UpdateUserDto } from "./dto/update-users.dto";
-import { ApiTags } from "@nestjs/swagger";
-import { RegisterUserDto } from "../auth/dto/register-users.dto";
+import { ApiConsumes, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { AnyFilesInterceptor, File } from "@nest-lab/fastify-multer";
 
 @ApiTags("users")
 @Controller("users")
+@UseInterceptors(ClassSerializerInterceptor)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
@@ -30,8 +30,16 @@ export class UserController {
   }
 
   @Patch(":id")
-  async update(@Param("id") id: number, @Body() updateUserDto: UpdateUserDto) {
-    const result = await this.userService.update(id, updateUserDto);
+  @ApiConsumes("multipart/form-data")
+  @UseInterceptors(AnyFilesInterceptor())
+  @ApiOperation({ summary: "Update User" })
+  async update(
+    @Param("id") id: number,
+    @Body() updateUserDto: UpdateUserDto,
+    @UploadedFiles() files: Array<File>
+  ) {
+    const file = files && files.length > 0 ? files[0] : undefined;
+    const result = await this.userService.update(id, updateUserDto, file);
     return result;
   }
 
@@ -56,6 +64,15 @@ export class UserController {
     return {
       message: `User with phone ${phone} retrieved successfully`,
       data: user,
+    };
+  }
+
+  @Get("profile/:id")
+  async getProfileById(@Param("id") id: number) {
+    const profile = await this.userService.getProfile(id);
+    return {
+      message: "Profile retrieved",
+      data: profile,
     };
   }
 }

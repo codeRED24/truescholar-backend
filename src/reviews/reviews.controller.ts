@@ -12,6 +12,7 @@ import {
   UseInterceptors,
   UploadedFiles,
   Req,
+  DefaultValuePipe,
 } from "@nestjs/common";
 import { ReviewsService } from "./reviews.service";
 import { CreateReviewDto } from "./dto/create-review.dto";
@@ -129,5 +130,19 @@ export class ReviewsController {
   @Delete(":id")
   remove(@Param("id", new ParseIntPipe()) id: number) {
     return this.reviewsService.remove(id);
+  }
+
+  @Get("user/:userId")
+  @ApiOperation({ summary: "Get all reviews by a user" })
+  @ApiQuery({ name: "status", required: false })
+  @ApiQuery({ name: "skip", required: false })
+  @ApiQuery({ name: "take", required: false })
+  findAllByUser(
+    @Param("userId", ParseIntPipe) userId: number,
+    @Query("status") status?: string,
+    @Query("skip", new DefaultValuePipe(0), ParseIntPipe) skip = 0,
+    @Query("take", new DefaultValuePipe(10), ParseIntPipe) take = 10
+  ) {
+    return this.reviewsService.findAllByUser(userId, status, skip, take);
   }
 }

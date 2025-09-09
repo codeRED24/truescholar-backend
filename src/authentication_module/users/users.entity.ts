@@ -7,10 +7,10 @@ import {
   ManyToOne,
   JoinColumn,
 } from "typeorm";
+import { Exclude } from "class-transformer";
 
 import { CollegeInfo } from "../../college/college-info/college-info.entity";
 import { CollegeWiseCourse } from "../../college/college-wise-course/college_wise_course.entity";
-import { Exclude } from "class-transformer";
 
 // @Entity()
 // export class User {
@@ -122,7 +122,6 @@ export class User {
 
   @UpdateDateColumn({ type: "timestamp" })
   updated_at: Date;
-
 
   @Column({ unique: true, nullable: true })
   custom_code: string;
