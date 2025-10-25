@@ -44,6 +44,21 @@ export class Review {
   @Column({ nullable: true, type: "int" })
   pass_year?: number;
 
+  @Column({ type: "boolean", nullable: true })
+  is_anonymous?: boolean;
+
+  @Column({ nullable: true })
+  stream?: string;
+
+  @Column({ nullable: true })
+  year_of_study?: string;
+
+  @Column({ nullable: true })
+  mode_of_study?: string;
+
+  @Column({ nullable: true })
+  current_semester?: string;
+
   // Student Review Files
   @Column({ type: "text", nullable: true })
   linkedin_profile?: string;
