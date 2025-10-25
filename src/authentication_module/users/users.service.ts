@@ -10,6 +10,8 @@ import { UpdateUserDto } from "./dto/update-users.dto";
 import * as dotenv from "dotenv";
 import { OtpRequest } from "./user-otp.entity";
 import { RegisterUserDto } from "../auth/dto/register-users.dto";
+import { FileUploadService } from "../../utils/file-upload/fileUpload.service";
+import { File } from "@nest-lab/fastify-multer";
 
 dotenv.config();
 console.log("SMTP_USER:", process.env.SMTP_USER);
@@ -21,8 +23,8 @@ export class UserService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     @InjectRepository(OtpRequest)
-
-    private readonly otpRepository: Repository<OtpRequest>
+    private readonly otpRepository: Repository<OtpRequest>,
+    private readonly fileUploadService: FileUploadService
   ) {}
 
   // GET ALL
@@ -49,12 +51,24 @@ export class UserService {
   // PATCH /users/:id
   async update(
     id: number,
-    updateUserDto: UpdateUserDto
+    updateUserDto: UpdateUserDto,
+    file?: File
   ): Promise<{ message: string; data?: User }> {
     const user = await this.findOne(id);
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
+
+    // Handle profile picture upload if file is provided
+    if (file) {
+      const uploadedUrl = await this.fileUploadService.uploadFile(
+        file,
+        "profile-pictures",
+        id
+      );
+      updateUserDto.user_img_url = uploadedUrl;
+    }
+
     await this.userRepository.update(id, updateUserDto);
     const updatedUser = await this.findOne(id);
 
@@ -92,6 +106,33 @@ export class UserService {
       throw new NotFoundException(
         `User with contact_number: ${contact_number} not found`
       );
+    }
+    return user;
+  }
+
+  //get user details for profile page
+  async getProfile(id: number): Promise<User> {
+    const user = await this.userRepository.findOne({
+      where: { id },
+      select: [
+        "id",
+        "custom_code",
+        "name",
+        "email",
+        "gender",
+        "contact_number",
+        "country_of_origin",
+        "college_roll_number",
+        "dob",
+        "user_type",
+        "user_img_url",
+        "college",
+        "custom_code",
+        "referrer_id",
+      ],
+    });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
     }
     return user;
   }
