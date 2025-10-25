@@ -12,6 +12,7 @@ import {
   UseInterceptors,
   UploadedFiles,
   Req,
+  UseGuards,
 } from "@nestjs/common";
 import { ReviewsService } from "./reviews.service";
 import { CreateReviewDto } from "./dto/create-review.dto";
@@ -23,8 +24,10 @@ import {
   ApiQuery,
   ApiConsumes,
   ApiBody,
+  ApiBearerAuth,
 } from "@nestjs/swagger";
 import { AnyFilesInterceptor } from "@nest-lab/fastify-multer";
+import { JwtAuthGuard } from "src/authentication_module/auth/jwt-auth.guard";
 
 @ApiTags("reviews")
 @Controller("reviews")
@@ -32,6 +35,8 @@ export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 
   @Post()
+  // @UseGuards(JwtAuthGuard)
+  // @ApiBearerAuth()
   @ApiConsumes("multipart/form-data")
   @ApiBody({
     schema: {
@@ -97,6 +102,23 @@ export class ReviewsController {
     } catch (error) {
       throw error;
     }
+  }
+
+  @Get("college/:college_id")
+  @ApiQuery({ name: "page", required: false, type: Number })
+  @ApiQuery({ name: "limit", required: false, type: Number })
+  findAllByCollege(
+    @Param("college_id") college_id: string,
+    @Query("page") page: number = 1,
+    @Query("limit") limit: number = 10
+  ) {
+    return this.reviewsService.findAllByCollege(+college_id, page, limit);
+  }
+
+  @Get("/college/:collegeId/ratings")
+  @ApiOperation({ summary: "Get aggregated ratings for a college" })
+  getAggregatedRatings(@Param("collegeId", ParseIntPipe) collegeId: number) {
+    return this.reviewsService.getAggregatedRatings(collegeId);
   }
 
   @Get()
