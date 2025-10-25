@@ -121,6 +121,96 @@ export class ReviewsService {
     return { data, total };
   }
 
+  async findAllByCollege(
+    collegeId: number,
+    page = 1,
+    limit = 10
+  ): Promise<{ data: Review[]; total: number }> {
+    const skip = (page - 1) * limit;
+    const [data, total] = await this.reviewRepository.findAndCount({
+      where: { college_id: collegeId, status: "approved" },
+      relations: ["user"],
+      order: { created_at: "DESC" },
+      skip,
+      take: limit,
+    });
+    return { data, total };
+  }
+
+  async getAggregatedRatings(collegeId: number): Promise<any> {
+    const ratings = await this.reviewRepository
+      .createQueryBuilder("review")
+      .select(
+        "ROUND(AVG(review.overall_satisfaction_rating), 1)",
+        "overall_satisfaction_rating"
+      )
+      .addSelect(
+        "ROUND(AVG(review.teaching_quality_rating), 1)",
+        "teaching_quality_rating"
+      )
+      .addSelect(
+        "ROUND(AVG(review.infrastructure_rating), 1)",
+        "infrastructure_rating"
+      )
+      .addSelect("ROUND(AVG(review.library_rating), 1)", "library_rating")
+      .addSelect(
+        "ROUND(AVG(review.placement_support_rating), 1)",
+        "placement_support_rating"
+      )
+      .addSelect(
+        "ROUND(AVG(review.administrative_support_rating), 1)",
+        "administrative_support_rating"
+      )
+      .addSelect("ROUND(AVG(review.hostel_rating), 1)", "hostel_rating")
+      .addSelect(
+        "ROUND(AVG(review.extracurricular_rating), 1)",
+        "extracurricular_rating"
+      )
+      .where("review.college_id = :collegeId", { collegeId })
+      .andWhere("review.status = :status", { status: "approved" })
+      .getRawOne();
+
+    const ratingBreakdown = await this.getRatingBreakdown(collegeId);
+
+    return { ...ratings, ratingBreakdown };
+  }
+
+  async getRatingBreakdown(collegeId: number): Promise<any> {
+    const ratingCounts = await this.reviewRepository
+      .createQueryBuilder("review")
+      .select(
+        "review.overall_satisfaction_rating as stars, COUNT(*)::int as count"
+      )
+      .where("review.college_id = :collegeId", { collegeId })
+      .andWhere("review.status = :status", { status: "approved" })
+      .groupBy("review.overall_satisfaction_rating")
+      .getRawMany();
+
+    const totalReviews = ratingCounts.reduce(
+      (acc, item) => acc + item.count,
+      0
+    );
+
+    let ratingBreakdown;
+    if (totalReviews === 0) {
+      ratingBreakdown = Array.from({ length: 5 }, (_, i) => ({
+        stars: 5 - i,
+        percentage: 0,
+      }));
+    } else {
+      ratingBreakdown = Array.from({ length: 5 }, (_, i) => {
+        const stars = 5 - i;
+        const item = ratingCounts.find((r) => r.stars === stars);
+        return {
+          stars,
+          percentage: item ? Math.round((item.count / totalReviews) * 100) : 0,
+        };
+      });
+    }
+
+    return ratingBreakdown;
+  }
+
   async findOne(id: number): Promise<Review | null> {
     return this.reviewRepository.findOne({ where: { id } });
   }
