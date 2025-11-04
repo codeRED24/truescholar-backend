@@ -13,6 +13,7 @@ import { LeadFormService } from './lead-form.service';
 import { CreateLeadFormDto } from './dto/create-lead-form.dto';
 import { UpdateLeadFormDto } from './dto/update-lead-form.dto';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { sendEmail } from '../../utils/email';
 
 @ApiTags('lead-form')
 @Controller('lead-form')
@@ -33,8 +34,16 @@ export class LeadFormController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new lead form' })
-  create(@Body(ValidationPipe) createLeadFormDto: CreateLeadFormDto) {
-    return this.leadFormService.create(createLeadFormDto);
+  async create(@Body(ValidationPipe) createLeadFormDto: CreateLeadFormDto) {
+    const leadForm = await this.leadFormService.create(createLeadFormDto);
+    if (process.env.TO_EMAIL) {
+      sendEmail('New Lead Form Submission', 'new-lead', {
+        name: leadForm.name,
+        email: leadForm.email,
+        phone: leadForm.mobile_no,
+      });
+    }
+    return leadForm;
   }
 
   @Patch(':id')

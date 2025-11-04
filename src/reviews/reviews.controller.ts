@@ -28,12 +28,16 @@ import {
   ApiBearerAuth,
 } from "@nestjs/swagger";
 import { AnyFilesInterceptor } from "@nest-lab/fastify-multer";
-import { JwtAuthGuard } from "src/authentication_module/auth/jwt-auth.guard";
+import { UserService } from "src/authentication_module/users/users.service";
+import { sendEmail } from "src/utils/email";
 
 @ApiTags("reviews")
 @Controller("reviews")
 export class ReviewsController {
-  constructor(private readonly reviewsService: ReviewsService) {}
+  constructor(
+    private readonly reviewsService: ReviewsService,
+    private readonly usersService: UserService
+  ) {}
 
   @Post()
   // @UseGuards(JwtAuthGuard)
@@ -99,6 +103,31 @@ export class ReviewsController {
         files,
         req
       );
+      if (process.env.TO_EMAIL) {
+        const user = await this.usersService.findOne(createReviewDto.user_id);
+        sendEmail("New Review Submission", "new-review", {
+          user_id: createReviewDto.user_id,
+          user: user.name || user.email,
+          college_id: createReviewDto.college_id,
+          course_id: createReviewDto.course_id,
+          review_title: createReviewDto.review_title,
+        });
+      }
+
+      // Send email to the user who submitted the review
+      const user = await this.usersService.findOne(createReviewDto.user_id);
+      if (user && user.email) {
+        sendEmail(
+          "Thank You for Your Review - TrueScholar",
+          "review-submission-user",
+          {
+            user_name: user.name || user.email,
+            current_year: new Date().getFullYear(),
+          },
+          user.email
+        );
+      }
+
       return result;
     } catch (error) {
       throw error;
