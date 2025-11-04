@@ -18,10 +18,15 @@ import { CreateReelDto } from "./dto/create-reel.dto";
 import { UpdateReelDto } from "./dto/update-reel.dto";
 import { ApiBody, ApiConsumes } from "@nestjs/swagger";
 import { AnyFilesInterceptor } from "@nest-lab/fastify-multer";
+import { sendEmail } from "../utils/email";
+import { UserService } from "../authentication_module/users/users.service";
 
 @Controller("reels")
 export class ReelsController {
-  constructor(private readonly reelsService: ReelsService) {}
+  constructor(
+    private readonly reelsService: ReelsService,
+    private readonly usersService: UserService
+  ) {}
 
   @Post()
   @ApiConsumes("multipart/form-data")
@@ -43,8 +48,18 @@ export class ReelsController {
     @UploadedFiles() files: Array<Express.Multer.File>,
     @Req() req: any
   ) {
-    // Delegate file handling and creation to service
-    return this.reelsService.create(createReelDto, files, req);
+    const reel = await this.reelsService.create(createReelDto, files, req);
+    if (process.env.TO_EMAIL) {
+      const user = await this.usersService.findOne(reel.user_id);
+      sendEmail("New Reel Submitted", "new-reel", {
+        user_id: reel.user_id,
+        college_id: reel.college_id,
+        type: reel.type,
+        user_name: user ? user.name : "N/A",
+        user_email: user ? user.email : "N/A",
+      });
+    }
+    return reel;
   }
 
   @Get()

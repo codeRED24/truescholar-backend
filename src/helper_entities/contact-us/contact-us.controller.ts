@@ -12,6 +12,8 @@ import { ContactUsService } from './contact-us.service';
 import { CreateContactUsDto } from './dto/create-contact-us.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { UpdateContactUsDto } from './dto/update-contact-us.dto';
+import { sendEmail } from '../../utils/email';
+
 @ApiTags('contact-us')
 @Controller('contact-us')
 export class ContactUsController {
@@ -32,8 +34,17 @@ export class ContactUsController {
   }
 
   @Post()
-  create(@Body() createContactUsDto: CreateContactUsDto) {
-    return this.contactUsService.create(createContactUsDto);
+  async create(@Body() createContactUsDto: CreateContactUsDto) {
+    const contactUs = await this.contactUsService.create(createContactUsDto);
+    if (process.env.TO_EMAIL) {
+      sendEmail('New Contact Us Submission', 'new-enquiry', {
+        name: contactUs.name,
+        email: contactUs.email,
+        phone: contactUs.mobile_no,
+        message: contactUs.query,
+      });
+    }
+    return contactUs;
   }
 
   @Patch(':id')
