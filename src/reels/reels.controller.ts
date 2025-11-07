@@ -50,7 +50,7 @@ export class ReelsController {
   ) {
     const reel = await this.reelsService.create(createReelDto, files, req);
     if (process.env.TO_EMAIL) {
-      const user = await this.usersService.findOne(reel.user_id);
+      const user = await this.usersService.findUserById(reel.user_id);
       sendEmail("New Reel Submitted", "new-reel", {
         user_id: reel.user_id,
         college_id: reel.college_id,

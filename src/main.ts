@@ -9,6 +9,7 @@ import {
 import { AllExceptionsFilter } from "./common/all-exceptions.filter";
 import { HttpAdapterHost } from "@nestjs/core";
 import * as dotenv from "dotenv";
+
 dotenv.config();
 
 async function bootstrap() {
@@ -17,6 +18,17 @@ async function bootstrap() {
     new FastifyAdapter()
   );
   app.useLogger(new Logger());
+
+  // Add Helmet with minimal config
+  await app
+    .getHttpAdapter()
+    .getInstance()
+    .register(require("@fastify/helmet"), {
+      contentSecurityPolicy: false, // Disabled for Swagger to work
+    });
+
+  // Register @fastify/cookie plugin to enable res.cookie() functionality
+  await app.getHttpAdapter().getInstance().register(require("@fastify/cookie"));
 
   const httpAdapterHost = app.get(HttpAdapterHost);
   app.useGlobalFilters(new AllExceptionsFilter(httpAdapterHost));

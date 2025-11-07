@@ -6,26 +6,38 @@ import {
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, Like, QueryFailedError } from "typeorm";
 import { User } from "./users.entity";
-import { UpdateUserDto } from "./dto/update-users.dto";
 import * as dotenv from "dotenv";
-import { OtpRequest } from "./user-otp.entity";
-import { RegisterUserDto } from "../auth/dto/register-users.dto";
 import { FileUploadService } from "../../utils/file-upload/fileUpload.service";
 import { File } from "@nest-lab/fastify-multer";
+import { RegisterUserDto } from "./dto/create-users.dto";
+import { UpdateUserDto } from "./dto/update-users.dto";
 
 dotenv.config();
-console.log("SMTP_USER:", process.env.SMTP_USER);
-console.log("SMTP_PASSWORD:", process.env.SMTP_PASSWORD);
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    @InjectRepository(OtpRequest)
-    private readonly otpRepository: Repository<OtpRequest>,
     private readonly fileUploadService: FileUploadService
   ) {}
+
+  async createUser(createUserDto: RegisterUserDto): Promise<User> {
+    const existingUser = await this.userRepository.findOne({
+      where: { email: createUserDto.email.toLowerCase() },
+    });
+
+    if (existingUser) {
+      throw new ConflictException("User with this email already exists");
+    }
+
+    const user = this.userRepository.create({
+      ...createUserDto,
+      email: createUserDto.email.toLowerCase(),
+    });
+
+    return this.userRepository.save(user);
+  }
 
   // GET ALL
   // async findAll(username?: string): Promise<User[]> {
@@ -40,7 +52,7 @@ export class UserService {
   // }
 
   // GET /users/:id
-  async findOne(id: number): Promise<User> {
+  async findUserById(id: number): Promise<User> {
     const user = await this.userRepository.findOne({ where: { id } });
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
@@ -54,7 +66,7 @@ export class UserService {
     updateUserDto: UpdateUserDto,
     file?: File
   ): Promise<{ message: string; data?: User }> {
-    const user = await this.findOne(id);
+    const user = await this.findUserById(id);
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
@@ -70,32 +82,41 @@ export class UserService {
     }
 
     await this.userRepository.update(id, updateUserDto);
-    const updatedUser = await this.findOne(id);
+    const updatedUser = await this.findUserById(id);
 
     return {
-      message: `User with ID ${id} updated successfully`,
+      message: `User updated successfully`,
       data: updatedUser,
     };
   }
 
   // DELETE /users/:id
   async remove(id: number): Promise<{ message: string }> {
-    const user = await this.findOne(id);
+    const user = await this.findUserById(id);
     if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found`);
+      throw new NotFoundException(`User not found`);
     }
     await this.userRepository.delete(id);
     return {
-      message: `User with ID ${id} deleted successfully`,
+      message: `User deleted successfully`,
     };
   }
 
-  async findOneByEmail(email: string): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { email } });
+  async findUserByEmail(email: string): Promise<User> {
+    const user = await this.userRepository.findOne({
+      where: { email: email.toLowerCase() },
+    });
     if (!user) {
-      throw new NotFoundException(`User with email ${email} not found`);
+      throw new NotFoundException(`User not found`);
     }
     return { ...user };
+  }
+
+  // Find a user by their custom code. Returns null if not found (no exception).
+  async findByCustomCode(custom_code: string): Promise<User | null> {
+    if (!custom_code) return null;
+    const user = await this.userRepository.findOne({ where: { custom_code } });
+    return user || null;
   }
 
   async findOneByPhone(contact_number: string): Promise<User> {
@@ -103,9 +124,7 @@ export class UserService {
       where: { contact_number },
     });
     if (!user) {
-      throw new NotFoundException(
-        `User with contact_number: ${contact_number} not found`
-      );
+      throw new NotFoundException(`User not found`);
     }
     return user;
   }

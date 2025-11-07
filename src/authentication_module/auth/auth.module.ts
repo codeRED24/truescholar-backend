@@ -1,32 +1,34 @@
 import { Module } from "@nestjs/common";
-import { JwtModule } from "@nestjs/jwt";
-import { PassportModule } from "@nestjs/passport";
 import { AuthService } from "./auth.service";
-import { JwtStrategy } from "./jwt.strategy";
 import { AuthController } from "./auth.controller";
+import { UserModule } from "../users/users.module";
+import { JwtModule } from "@nestjs/jwt";
+import { SessionsModule } from "../sessions/sessions.module";
 import { ConfigModule, ConfigService } from "@nestjs/config";
-import { LocalStrategy } from "./local.strategy";
-import { UserModule } from "../../authentication_module/users/users.module";
-import { TypeOrmModule } from "@nestjs/typeorm";
-import { User } from "../users/users.entity";
+import { ThrottlerModule } from "@nestjs/throttler";
+import { RefreshAuthGuard } from "./refresh-auth.guard";
+import { OwnerGuard } from "../../common/guards/owner.guard";
 
 @Module({
   imports: [
     UserModule,
-    ConfigModule,
-    PassportModule,
-    TypeOrmModule.forFeature([User]),
+    SessionsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>("JWT_SECRET"),
-        signOptions: { expiresIn: "15d" },
+        signOptions: { expiresIn: "1h" }, // Changed from 60s to 1h
       }),
+      inject: [ConfigService],
     }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // milliseconds
+        limit: 5, // 5 attempts per minute per IP for auth endpoints
+      },
+    ]),
   ],
-  providers: [AuthService, JwtStrategy, LocalStrategy],
-  exports: [AuthService],
   controllers: [AuthController],
+  providers: [AuthService, RefreshAuthGuard, OwnerGuard],
 })
 export class AuthModule {}

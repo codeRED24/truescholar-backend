@@ -2,20 +2,19 @@ import { Module, forwardRef } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { JwtModule } from "@nestjs/jwt";
 import { ConfigModule, ConfigService } from "@nestjs/config";
-import { UserService } from "./users.service";
-import { UserController } from "./users.controller";
-import { User } from "./users.entity";
-import { FileUploadService } from "../../utils/file-upload/fileUpload.service";
-import { VerificationModule } from "../verification/verification.module";
+import { VerificationService } from "./verification.service";
+import { VerificationController } from "./verification.controller";
+import { Verification } from "./verification.entity";
+import { User } from "../users/users.entity";
 import { SessionsModule } from "../sessions/sessions.module";
+import { UserModule } from "../users/users.module";
 import { RefreshAuthGuard } from "../auth/refresh-auth.guard";
-import { OwnerGuard } from "../../common/guards/owner.guard";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
-    forwardRef(() => VerificationModule),
+    TypeOrmModule.forFeature([Verification, User]),
     SessionsModule,
+    forwardRef(() => UserModule),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -25,8 +24,8 @@ import { OwnerGuard } from "../../common/guards/owner.guard";
       inject: [ConfigService],
     }),
   ],
-  controllers: [UserController],
-  providers: [UserService, FileUploadService, RefreshAuthGuard, OwnerGuard],
-  exports: [UserService, TypeOrmModule, VerificationModule],
+  controllers: [VerificationController],
+  providers: [VerificationService, RefreshAuthGuard],
+  exports: [VerificationService, TypeOrmModule],
 })
-export class UserModule {}
+export class VerificationModule {}

@@ -1,11 +1,11 @@
 import { ApiProperty } from "@nestjs/swagger";
 import {
   IsNotEmpty,
-  IsOptional,
   IsString,
   IsEmail,
   IsDateString,
   MinLength,
+  IsOptional,
 } from "class-validator";
 
 export class RegisterUserDto {
@@ -19,10 +19,10 @@ export class RegisterUserDto {
   @IsString()
   name: string;
 
-  @ApiProperty({ description: "Email ID of the user", required: false })
-  @IsOptional()
+  @ApiProperty({ description: "Email ID of the user" })
+  @IsNotEmpty()
   @IsEmail()
-  email?: string;
+  email: string;
 
   @ApiProperty({ description: "Gender of the user", required: false })
   @IsOptional()
@@ -67,11 +67,11 @@ export class RegisterUserDto {
   @IsString()
   user_img_url?: string;
 
-  @ApiProperty({ description: "User password", required: false })
-  @IsOptional()
+  @ApiProperty({ description: "User password" })
+  @IsNotEmpty()
   @IsString()
-  @MinLength(6, { message: "Password must be at least 6 characters long" })
-  password?: string;
+  @MinLength(8, { message: "Password must be at least 8 characters long" })
+  password: string;
 
   @ApiProperty({ description: "Referral code", required: false })
   @IsOptional()

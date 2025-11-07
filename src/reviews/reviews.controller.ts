@@ -104,7 +104,9 @@ export class ReviewsController {
         req
       );
       if (process.env.TO_EMAIL) {
-        const user = await this.usersService.findOne(createReviewDto.user_id);
+        const user = await this.usersService.findUserById(
+          createReviewDto.user_id
+        );
         sendEmail("New Review Submission", "new-review", {
           user_id: createReviewDto.user_id,
           user: user.name || user.email,
@@ -115,7 +117,9 @@ export class ReviewsController {
       }
 
       // Send email to the user who submitted the review
-      const user = await this.usersService.findOne(createReviewDto.user_id);
+      const user = await this.usersService.findUserById(
+        createReviewDto.user_id
+      );
       if (user && user.email) {
         sendEmail(
           "Thank You for Your Review - TrueScholar",
