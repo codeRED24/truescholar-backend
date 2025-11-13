@@ -252,8 +252,9 @@ export class ExamsController {
   })
   async getExamSitemapData(
     @Query("page") page: number = 1,
-    @Query("limit") limit: number = 1000
+    @Query("limit") limit: number = 1000,
+    @Query("onlyInfo") onlyInfo: boolean = false
   ): Promise<ExamSitemapResponseDto> {
-    return this.examsService.getExamSitemapData(page, limit);
+    return this.examsService.getExamSitemapData(page, limit, onlyInfo);
   }
 }
