@@ -112,7 +112,7 @@ export class ExamsService {
 
   async getExamInfo(exam_id: number): Promise<ExamInfoDto> {
     const exam = await this.examRepository.findOne({
-      where: { exam_id },
+      where: { exam_id, is_active: "true" },
     });
     if (!exam) {
       throw new NotFoundException(`Exam with ID ${exam_id} not found`);
@@ -224,7 +224,7 @@ export class ExamsService {
     // console.log({ exam_id, silo_name });
     return tryCatchWrapper(async () => {
       const exam = await this.dataSource.query(
-        "SELECT exam_id, exam_name, exam_description, exam_logo, conducting_authority, mode_of_exam, exam_duration from exam where exam_id = $1;",
+        "SELECT exam_id, exam_name, exam_description, exam_logo, conducting_authority, mode_of_exam, exam_duration, slug from exam where exam_id = $1 and is_active= 'true';",
         [exam_id]
       );
 
@@ -357,7 +357,7 @@ export class ExamsService {
 
   async getExamInfoBySlug(slug: string): Promise<ExamInfoDto> {
     const exam = await this.examRepository.findOne({
-      where: { slug },
+      where: { slug, is_active: "true" },
     });
     if (!exam) {
       throw new NotFoundException(`Exam with slug '${slug}' not found`);
@@ -969,7 +969,8 @@ export class ExamsService {
   // Get exam sitemap data with available silos
   async getExamSitemapData(
     page: number = 1,
-    limit: number = 1000
+    limit: number = 1000,
+    onlyInfo: boolean = false
   ): Promise<ExamSitemapResponseDto> {
     const offset = (page - 1) * limit;
 
@@ -1002,6 +1003,17 @@ export class ExamsService {
     ]);
 
     const total = parseInt(countResult[0]?.total || "0", 10);
+
+    if (onlyInfo) {
+      return {
+        exams: exams.map((e) => ({
+          exam_id: e.exam_id,
+          exam_name: e.exam_name,
+          slug: e.slug,
+        })),
+        total,
+      };
+    }
 
     // Get all exam IDs for batch queries
     const examIds = exams.map((e) => e.exam_id);
