@@ -847,7 +847,7 @@ export class HomePageService {
     });
     const courseGroupSearchResults = await this.courseGroupRepository.find({
       where: { is_active: true },
-      select: ["name", "slug", "course_group_id", "full_name"],
+      select: ["name", "course_group_id", "full_name"],
     });
 
     const articlesSearchResults = await this.articleRepository.find({

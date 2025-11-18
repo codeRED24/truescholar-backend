@@ -67,6 +67,11 @@ export class CollegeInfoController {
     description: "ID of the stream",
   })
   @ApiQuery({
+    name: "course_group_name",
+    required: false,
+    description: "Name of the course group",
+  })
+  @ApiQuery({
     name: "is_active",
     required: false,
     description: "Filter colleges by active status (true or false)",
@@ -90,6 +95,7 @@ export class CollegeInfoController {
     @Query("state_name") state_name?: string,
     @Query("type_of_institute") type_of_institute?: string,
     @Query("stream_name") stream_name?: string,
+    @Query("course_group_name") course_group_name?: string,
     @Query("is_active") is_active?: boolean,
     @Query("fee_range") fee_range?: string,
     @Query("page") page: number = 1,
@@ -104,6 +110,9 @@ export class CollegeInfoController {
     const streamsArray = stream_name
       ? stream_name.split(",").map((s) => s.trim())
       : undefined;
+    const courseGroupArray = course_group_name
+      ? course_group_name.split(",").map((s) => s.trim())
+      : undefined;
     const typeOfInstituteArray = type_of_institute
       ? type_of_institute.split(",").map((s) => s.trim())
       : undefined;
@@ -116,6 +125,7 @@ export class CollegeInfoController {
       statesArray,
       typeOfInstituteArray,
       streamsArray,
+      courseGroupArray,
       feeRangeArray,
       is_active,
       page,
