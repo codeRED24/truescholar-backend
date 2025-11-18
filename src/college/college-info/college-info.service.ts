@@ -172,6 +172,7 @@ export class CollegeInfoService {
     // country_id?: number,
     type_of_institute?: string[],
     stream_name?: string[],
+    course_group_name?: string[],
     fee_range?: string[],
     is_active?: boolean,
     page: number = 1,
@@ -237,6 +238,24 @@ export class CollegeInfoService {
           `REGEXP_REPLACE(LOWER(stream.stream_name), '[^a-z0-9]', '', 'g') ILIKE :stream_name`,
           {
             stream_name: `%${normalizedStream}%`,
+          }
+        );
+      }
+
+      if (Array.isArray(course_group_name) && course_group_name.length > 0) {
+        const normalizedCourseGroup = course_group_name[0]
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "");
+        queryBuilder.andWhere(
+          `EXISTS (
+            SELECT 1
+            FROM college_wise_course cwc
+            JOIN course_group cg ON cwc.course_group_id = cg.course_group_id
+            WHERE cwc.college_id = "collegeInfo"."college_id"
+              AND REGEXP_REPLACE(LOWER(cg.full_name), '[^a-z0-9]', '', 'g') ILIKE :course_group_name
+          )`,
+          {
+            course_group_name: `%${normalizedCourseGroup}%`,
           }
         );
       }
@@ -362,6 +381,7 @@ export class CollegeInfoService {
           stream_filter: [],
           type_of_institute_filter: [],
           specialization_filter: [],
+          course_group_filter: [],
         },
         total_colleges_count: 0,
       };
@@ -560,9 +580,58 @@ export class CollegeInfoService {
       mapCollegeData(college, false)
     );
 
+    const courseGroupData = await this.collegeWiseCourseRepository
+      .createQueryBuilder("cwc")
+      .select("cwc.college_id", "college_id")
+      .addSelect("cg.course_group_id", "course_group_id")
+      .addSelect("cg.full_name", "course_group_name")
+      .addSelect("COUNT(*)", "count")
+      .innerJoin("cwc.courseGroup", "cg")
+      .where("cwc.college_id IN (:...collegeIds)", {
+        collegeIds: allCollegesForFilter.map((c) => c.college_id),
+      })
+      .groupBy("cwc.college_id, cg.course_group_id, cg.name")
+      .getRawMany();
+
+    const courseGroupMap = courseGroupData.reduce((map, item) => {
+      const collegeId = item.college_id;
+      if (!map[collegeId]) {
+        map[collegeId] = {};
+      }
+      if (!map[collegeId][item.course_group_id]) {
+        map[collegeId][item.course_group_id] = {
+          course_group_id: item.course_group_id,
+          course_group_name: item.course_group_name,
+        };
+      }
+      map[collegeId][item.course_group_id].count += parseInt(item.count, 10);
+      return map;
+    }, {});
+
+    // Build aggregated course group filter (count unique colleges per course group)
+    const courseGroupFilterMap: {
+      [key: number]: {
+        course_group_id: number;
+        course_group_name: string;
+      };
+    } = {};
+
+    Object.entries(courseGroupMap).forEach(([collegeId, courseGroups]) => {
+      Object.values(courseGroups).forEach((courseGroup: any) => {
+        if (!courseGroupFilterMap[courseGroup.course_group_id]) {
+          courseGroupFilterMap[courseGroup.course_group_id] = {
+            course_group_id: courseGroup.course_group_id,
+            course_group_name: courseGroup.course_group_name,
+          };
+        }
+      });
+    });
+
     const filterSection = this.buildCollegeFilterSection(
       allCollegesForFilter,
-      specializationMap
+      specializationMap,
+      courseGroupMap,
+      courseGroupFilterMap
     );
 
     // After building the filter section, determine the selected description
@@ -618,7 +687,9 @@ export class CollegeInfoService {
 
   private buildCollegeFilterSection(
     colleges: CollegeListingDto[],
-    specializationMap: any
+    specializationMap: any,
+    courseGroupMap: any,
+    courseGroupFilterMap: any
   ): any {
     const cityMap: {
       [key: string]: {
@@ -706,6 +777,13 @@ export class CollegeInfoService {
       )
       .sort((a, b) => b.count - a.count);
 
+    const courseGroupFilter = Object.values(courseGroupFilterMap)
+      .map((courseGroup: any) => ({
+        course_group_id: courseGroup.course_group_id,
+        course_group_name: courseGroup.course_group_name,
+      }))
+      .sort((a, b) => b.course_group_name - a.course_group_name);
+
     const sortedCityFilter = Object.values(cityMap).sort(
       (a, b) => b.count - a.count
     );
@@ -730,6 +808,7 @@ export class CollegeInfoService {
       stream_filter: sortedStreamFilter,
       type_of_institute_filter: sortedTypeOfInstituteFilter,
       specialization_filter: specializationFilter,
+      course_group_filter: courseGroupFilter,
     };
   }
 
@@ -771,6 +850,7 @@ export class CollegeInfoService {
             stream_filter: [],
             type_of_institute_filter: [],
             specialization_filter: [],
+            course_group_filter: [],
           },
           total_colleges_count: 0,
         };
@@ -797,6 +877,7 @@ export class CollegeInfoService {
             stream_filter: [],
             type_of_institute_filter: [],
             specialization_filter: [],
+            course_group_filter: [],
           },
           total_colleges_count: 0,
         };
@@ -885,6 +966,7 @@ export class CollegeInfoService {
           stream_filter: [],
           type_of_institute_filter: [],
           specialization_filter: [],
+          course_group_filter: [],
         },
         total_colleges_count: 0,
       };

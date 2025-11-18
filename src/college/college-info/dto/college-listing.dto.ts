@@ -62,6 +62,10 @@ export class CollegeFilterDto {
     name: string;
     count: number;
   }>;
+  course_group_filter: Array<{
+    course_group_id: number;
+    course_group_name: string;
+  }>;
 }
 
 export class CollegeListingResponseDto {
