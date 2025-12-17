@@ -2412,7 +2412,7 @@ export class CollegeInfoService {
   async getFees(id: number, schema: boolean) {
     return tryCatchWrapper(async () => {
       // Return If Active Info article is absent.
-      await this.checkCollegeInfoActivity(id);
+      // await this.checkCollegeInfoActivity(id);
 
       const [collegeInfo, authors, feesWithGroup, examSection, courseCount] =
         await Promise.all([
@@ -2625,7 +2625,7 @@ export class CollegeInfoService {
   async getCoursesAndFees(id: number, schema: boolean) {
     return tryCatchWrapper(async () => {
       // Return If Active Info article is absent.
-      await this.checkCollegeInfoActivity(id);
+      // await this.checkCollegeInfoActivity(id);
 
       const [
         collegeInfo,
@@ -3139,7 +3139,7 @@ export class CollegeInfoService {
   async getPlacementProcess(id: number): Promise<PlacementDto> {
     try {
       // Return If Active Info article is absent.
-      await this.checkCollegeInfoActivity(id);
+      // await this.checkCollegeInfoActivity(id);
 
       const collegeInfo = await this.collegeInfoRepository.findOne({
         where: { college_id: id },
@@ -3879,7 +3879,7 @@ export class CollegeInfoService {
 
   async getRankings(id: number, schema: boolean): Promise<RankingDto> {
     // Return If Active Info article is absent.
-    await this.checkCollegeInfoActivity(id);
+    // await this.checkCollegeInfoActivity(id);
 
     // Fetch college information with related data
     const collegeInfo = await this.collegeInfoRepository.findOne({
