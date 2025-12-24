@@ -21,33 +21,31 @@ import { UpdateReviewDto } from "./dto/update-review.dto";
 import {
   ApiTags,
   ApiOperation,
-  ApiResponse,
   ApiQuery,
   ApiConsumes,
   ApiBody,
   ApiBearerAuth,
 } from "@nestjs/swagger";
 import { AnyFilesInterceptor } from "@nest-lab/fastify-multer";
-import { UserService } from "src/authentication_module/users/users.service";
 import { sendEmail } from "src/utils/email";
+import { AuthGuard } from "../authentication_module/better-auth/guards/auth.guard";
+import { User as UserDecorator } from "../authentication_module/better-auth/decorators/auth.decorators";
+import { User } from "../authentication_module/better-auth/entities";
 
 @ApiTags("reviews")
 @Controller("reviews")
 export class ReviewsController {
-  constructor(
-    private readonly reviewsService: ReviewsService,
-    private readonly usersService: UserService
-  ) {}
+  constructor(private readonly reviewsService: ReviewsService) {}
 
   @Post()
-  // @UseGuards(JwtAuthGuard)
-  // @ApiBearerAuth()
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @ApiConsumes("multipart/form-data")
   @ApiBody({
     schema: {
       type: "object",
       properties: {
-        user_id: { type: "number" },
+        user_id: { type: "string" },
         degree_certificate: { type: "string", format: "binary" },
         mark_sheet: { type: "string", format: "binary" },
         college_images: {
@@ -94,7 +92,8 @@ export class ReviewsController {
   async create(
     @Body() createReviewDto: CreateReviewDto,
     @UploadedFiles() files: Array<Express.Multer.File>,
-    @Req() req: any
+    @Req() req: any,
+    @UserDecorator() user: User
   ) {
     try {
       // Delegate file handling and creation to service
@@ -103,10 +102,11 @@ export class ReviewsController {
         files,
         req
       );
+
+      // Send notification email to admin
       if (process.env.TO_EMAIL) {
-        const user = await this.usersService.findOne(createReviewDto.user_id);
         sendEmail("New Review Submission", "new-review", {
-          user_id: createReviewDto.user_id,
+          user_id: user.id,
           user: user.name || user.email,
           college_id: createReviewDto.college_id,
           course_id: createReviewDto.course_id,
@@ -114,9 +114,8 @@ export class ReviewsController {
         });
       }
 
-      // Send email to the user who submitted the review
-      const user = await this.usersService.findOne(createReviewDto.user_id);
-      if (user && user.email) {
+      // Send confirmation email to the user who submitted the review
+      if (user?.email) {
         sendEmail(
           "Thank You for Your Review - TrueScholar",
           "review-submission-user",
@@ -189,7 +188,7 @@ export class ReviewsController {
   @ApiQuery({ name: "skip", required: false })
   @ApiQuery({ name: "take", required: false })
   findAllByUser(
-    @Param("userId", ParseIntPipe) userId: number,
+    @Param("userId") userId: string,
     @Query("status") status?: string,
     @Query("skip", new DefaultValuePipe(0), ParseIntPipe) skip = 0,
     @Query("take", new DefaultValuePipe(10), ParseIntPipe) take = 10

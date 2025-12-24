@@ -13,7 +13,7 @@ export class FileUploadService {
   async uploadFile(
     file: File,
     folder: string,
-    extraName?: number
+    extraName?: string | number
   ): Promise<string> {
     // sanitize original name: replace whitespace with '-' and remove path segments
     const safeOriginalName = file.originalname

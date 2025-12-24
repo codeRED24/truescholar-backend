@@ -7,10 +7,11 @@ import {
   ManyToOne,
   JoinColumn,
   Unique,
+  Index,
 } from "typeorm";
-import { User } from "../../authentication_module/users/users.entity";
 import { CollegeInfo } from "../../college/college-info/college-info.entity";
 import { CollegeWiseCourse } from "../../college/college-wise-course/college_wise_course.entity";
+import { User } from "../../authentication_module/better-auth/entities";
 
 @Entity("reviews")
 // @Unique(["email", "college_name"])
@@ -24,6 +25,7 @@ export class Review {
   @UpdateDateColumn({ type: "timestamptz", default: () => "NOW()" })
   updated_at: Date;
 
+  @Index()
   @Column({ nullable: true, type: "int" })
   college_id?: number;
 
@@ -166,8 +168,9 @@ export class Review {
   reward_status: "pending" | "processed" | "paid";
 
   // Relation to user who submitted the review
-  @Column({ nullable: true, type: "int" })
-  user_id?: number;
+  @Index()
+  @Column({ nullable: true, type: "text" })
+  user_id?: string;
 
   @ManyToOne(() => User, { nullable: true, onDelete: "SET NULL" })
   @JoinColumn({ name: "user_id" })

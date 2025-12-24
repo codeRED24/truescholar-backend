@@ -42,8 +42,8 @@ export class CreateCourseDto {
 
   @ApiProperty({ description: "Course duration", required: false })
   @IsOptional()
-  @IsString()
-  duration?: string;
+  @IsNumber()
+  duration?: number;
 
   @ApiProperty({ description: "Last update date", required: false })
   @IsOptional()
@@ -66,8 +66,8 @@ export class CreateCourseDto {
 
   @ApiProperty({ description: "Course code", required: false })
   @IsOptional()
-  @IsString()
-  course_code?: string;
+  @IsNumber()
+  course_code?: number;
 
   @ApiProperty({ description: "Is the course online only?", required: false })
   @IsOptional()

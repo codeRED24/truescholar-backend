@@ -13,10 +13,10 @@ import {
 import { Transform } from "class-transformer";
 
 export class CreateReviewDto {
-  @ApiProperty({ description: "User id who submits the review" })
-  @Transform(({ value }) => parseInt(value))
-  @IsInt()
-  user_id: number;
+  @ApiPropertyOptional({ description: "User id who submits the review" })
+  @IsOptional()
+  @IsString()
+  user_id?: string;
 
   @ApiProperty({ description: "College id (int)", required: false })
   @IsOptional()

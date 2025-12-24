@@ -53,7 +53,7 @@ export class Course {
   slug: string;
 
   @Column({ type: "int", nullable: true })
-  duration: string;
+  duration: number;
 
   @Column({ type: "varchar", length: 100, nullable: true })
   last_update: string;
@@ -65,7 +65,7 @@ export class Course {
   is_approved: boolean;
 
   @Column({ type: "int", nullable: true })
-  course_code: string;
+  course_code: number;
 
   @Column({ type: "boolean", nullable: true })
   online_only: boolean;
@@ -129,10 +129,10 @@ export class Course {
     nullable: true,
     onDelete: "SET NULL",
   })
+  @JoinColumn({ name: "specialization_id" })
+  specialization: Specialization;
+
   @ManyToOne(() => Stream, { nullable: true, onDelete: "SET NULL" })
   @JoinColumn({ name: "stream_id" })
   stream: Stream;
-
-  @JoinColumn({ name: "specialization_id" })
-  college: Specialization;
 }

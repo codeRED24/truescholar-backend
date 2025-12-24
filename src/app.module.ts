@@ -13,9 +13,7 @@ import { StreamModule } from "./helper_entities/stream/stream.module";
 import { ArticlesModule } from "./articles_modules/articles/articles.module";
 import { ExamsModule } from "./exams_module/exams/exams.module";
 import { CoursesModule } from "./courses_module/courses/courses.module";
-import { AuthModule } from "./authentication_module/auth/auth.module";
 import { ConfigModule } from "@nestjs/config";
-import { UserModule } from "./authentication_module/users/users.module";
 import { CollegeInfoModule } from "./college/college-info/college-info.module";
 import { CollegeContentModule } from "./college/college-content/college-content.module";
 import { CollegeGalleryModule } from "./college/college-gallery/college-gallery.module";
@@ -47,16 +45,18 @@ import { ListingContentModule } from "./helper_entities/listing-content/listing-
 import * as dotenv from "dotenv";
 dotenv.config();
 import { ExamDocumentModule } from "./helper_entities/exams-document/exams-document.module";
-import { CmsModule } from "./cms/cms.module";
+// import { CmsModule } from "./cms/cms.module";
 import { ScheduleModule } from "@nestjs/schedule";
 import { SitemapModule } from "./sitemaps/sitemap.module";
 import { AppDataSource } from "./data-source"; // Import DataSource
 import { FastifyMulterModule } from "@nest-lab/fastify-multer";
+import { BetterAuthModule } from "./authentication_module/better-auth/better-auth.module";
+import { ReelsModule } from "./reels/reels.module";
 import { ReviewsModule } from "./reviews/reviews.module";
-import { ReelsModule } from './reels/reels.module';
 
 @Module({
   imports: [
+    BetterAuthModule,
     CollegeSearchModule,
     CompareModule,
     TypeOrmModule.forRoot(AppDataSource.options), // Use DataSource options
@@ -86,8 +86,6 @@ import { ReelsModule } from './reels/reels.module';
     ArticlesModule,
     ExamsModule,
     CoursesModule,
-    AuthModule,
-    UserModule,
     CollegeInfoModule,
     CollegeContentModule,
     CollegeGalleryModule,
@@ -119,8 +117,8 @@ import { ReelsModule } from './reels/reels.module';
     // CmsModule,
     ScheduleModule.forRoot(),
     SitemapModule,
-    ReviewsModule,
     ReelsModule,
+    ReviewsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

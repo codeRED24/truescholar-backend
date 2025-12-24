@@ -12,29 +12,30 @@ import {
   UseInterceptors,
   UploadedFiles,
   Req,
+  UseGuards,
 } from "@nestjs/common";
 import { ReelsService } from "./reels.service";
 import { CreateReelDto } from "./dto/create-reel.dto";
 import { UpdateReelDto } from "./dto/update-reel.dto";
-import { ApiBody, ApiConsumes } from "@nestjs/swagger";
+import { ApiBody, ApiConsumes, ApiBearerAuth } from "@nestjs/swagger";
 import { AnyFilesInterceptor } from "@nest-lab/fastify-multer";
 import { sendEmail } from "../utils/email";
-import { UserService } from "../authentication_module/users/users.service";
+import { AuthGuard } from "../authentication_module/better-auth/guards/auth.guard";
+import { User as UserDecorator } from "../authentication_module/better-auth/decorators/auth.decorators";
+import { User } from "../authentication_module/better-auth/entities";
 
 @Controller("reels")
 export class ReelsController {
-  constructor(
-    private readonly reelsService: ReelsService,
-    private readonly usersService: UserService
-  ) {}
+  constructor(private readonly reelsService: ReelsService) {}
 
   @Post()
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @ApiConsumes("multipart/form-data")
   @ApiBody({
     schema: {
       type: "object",
       properties: {
-        user_id: { type: "number" },
         reel: { type: "string", format: "binary" },
         college_id: { type: "number" },
         type: { type: "string" },
@@ -46,17 +47,22 @@ export class ReelsController {
   async create(
     @Body() createReelDto: CreateReelDto,
     @UploadedFiles() files: Array<Express.Multer.File>,
-    @Req() req: any
+    @Req() req: any,
+    @UserDecorator() user: User
   ) {
-    const reel = await this.reelsService.create(createReelDto, files, req);
+    const reel = await this.reelsService.create(
+      createReelDto,
+      files,
+      req,
+      user
+    );
     if (process.env.TO_EMAIL) {
-      const user = await this.usersService.findOne(reel.user_id);
       sendEmail("New Reel Submitted", "new-reel", {
-        user_id: reel.user_id,
+        user_id: user.id,
         college_id: reel.college_id,
         type: reel.type,
-        user_name: user ? user.name : "N/A",
-        user_email: user ? user.email : "N/A",
+        user_name: user.name,
+        user_email: user.email,
       });
     }
     return reel;
@@ -73,6 +79,8 @@ export class ReelsController {
   }
 
   @Patch(":id")
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
   async update(
     @Param("id", ParseIntPipe) id: number,
@@ -82,6 +90,8 @@ export class ReelsController {
   }
 
   @Delete(":id")
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   async remove(@Param("id", ParseIntPipe) id: number) {
     return this.reelsService.remove(id);
   }
