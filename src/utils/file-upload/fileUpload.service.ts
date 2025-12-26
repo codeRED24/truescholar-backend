@@ -29,6 +29,7 @@ export class FileUploadService {
       Key: filePath,
       Body: file.buffer,
       ContentType: file.mimetype,
+      ACL: "public-read",
     };
     const uploadResult = await this.s3.upload(params).promise();
     return uploadResult.Location;

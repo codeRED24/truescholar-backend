@@ -53,6 +53,7 @@ import { FastifyMulterModule } from "@nest-lab/fastify-multer";
 import { BetterAuthModule } from "./authentication_module/better-auth/better-auth.module";
 import { ReelsModule } from "./reels/reels.module";
 import { ReviewsModule } from "./reviews/reviews.module";
+import { ProfileModule } from "./profile/profile.module";
 
 @Module({
   imports: [
@@ -119,6 +120,7 @@ import { ReviewsModule } from "./reviews/reviews.module";
     SitemapModule,
     ReelsModule,
     ReviewsModule,
+    ProfileModule,
   ],
   controllers: [AppController],
   providers: [AppService],
