@@ -43,6 +43,6 @@ export class AppService implements OnModuleInit {
   }
 
   getHello(): string {
-    return "Hello From truescholar! - 17-11-25 17:16";
+    return "Hello From truescholar! - 27-12-25 12:54";
   }
 }
