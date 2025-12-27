@@ -43,6 +43,6 @@ export class Specialization {
   })
   kapp_score?: number;
 
-  @OneToMany(() => Course, (course) => course.college)
+  @OneToMany(() => Course, (course) => course.specialization)
   courses: Course[];
 }

@@ -5,7 +5,7 @@ import { CreateReviewDto } from "./dto/create-review.dto";
 import { UpdateReviewDto } from "./dto/update-review.dto";
 import { Review } from "./entities/review.entity";
 import { FileUploadService } from "../utils/file-upload/fileUpload.service";
-import { User } from "../authentication_module/users/users.entity";
+import { User } from "../authentication_module/better-auth/entities";
 
 @Injectable()
 export class ReviewsService {
@@ -137,7 +137,7 @@ export class ReviewsService {
   }
 
   async findAllByUser(
-    userId: number,
+    userId: string,
     status?: string,
     skip = 0,
     take = 25

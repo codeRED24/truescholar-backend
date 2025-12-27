@@ -3,7 +3,6 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { CollegeInfoService } from "./college-info.service";
 import { CollegeInfoController } from "./college-info.controller";
 import { CollegeInfo } from "./college-info.entity";
-import { AuthModule } from "../../authentication_module/auth/auth.module";
 import { CollegeContent } from "../college-content/college-content.entity";
 import { City } from "../../helper_entities/cities/city.entity";
 import { State } from "../../helper_entities/state/state.entity";
@@ -47,7 +46,6 @@ import { CollegeCutoff } from "../college-cutoff/college_cutoff.entity";
       CollegeHostelCampus,
       CollegeCutoff,
     ]),
-    AuthModule,
     ConfigModule,
     ElasticsearchModule.registerAsync({
       imports: [ConfigModule],

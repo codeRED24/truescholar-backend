@@ -5,6 +5,7 @@ import { CreateReelDto } from "./dto/create-reel.dto";
 import { UpdateReelDto } from "./dto/update-reel.dto";
 import { Reel } from "./entities/reel.entity";
 import { FileUploadService } from "../utils/file-upload/fileUpload.service";
+import { User } from "better-auth/types";
 
 @Injectable()
 export class ReelsService {
@@ -17,7 +18,8 @@ export class ReelsService {
   async create(
     createReelDto: CreateReelDto,
     files: Array<Express.Multer.File> = [],
-    req?: any
+    req?: any,
+    user?: User
   ): Promise<any> {
     let reelUrl: string | undefined;
 
@@ -27,14 +29,14 @@ export class ReelsService {
         reelUrl = await this.fileUploadService.uploadFile(
           reelVideo as any,
           "reels",
-          createReelDto.user_id
+          Number(user?.id)
         );
       }
     }
 
     const reel = this.reelRepository.create({
       reel_url: reelUrl,
-      user_id: createReelDto.user_id,
+      user_id: user?.id,
       college_id: createReelDto.college_id,
       type: createReelDto.type,
     });

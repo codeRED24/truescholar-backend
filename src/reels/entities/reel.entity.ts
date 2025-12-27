@@ -1,4 +1,4 @@
-import { User } from "../../authentication_module/users/users.entity";
+import { User } from "src/authentication_module/better-auth/entities";
 import { CollegeInfo } from "../../college/college-info/college-info.entity";
 import {
   Column,
@@ -37,8 +37,8 @@ export class Reel {
   college?: CollegeInfo;
 
   @Index()
-  @Column({ nullable: true, type: "int" })
-  user_id?: number;
+  @Column({ nullable: true, type: "text" })
+  user_id?: string;
 
   @ManyToOne(() => User, { onDelete: "SET NULL" })
   @JoinColumn({ name: "user_id" })

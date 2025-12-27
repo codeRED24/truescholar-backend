@@ -1,27 +1,28 @@
-import { NestFactory } from "@nestjs/core";
-import { AppModule } from "./app.module";
+import { AllExceptionsFilter } from "./common/all-exceptions.filter";
+import * as dotenv from "dotenv";
 import { Logger } from "@nestjs/common";
+import { HttpAdapterHost, NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import {
   FastifyAdapter,
   NestFastifyApplication,
 } from "@nestjs/platform-fastify";
-import { AllExceptionsFilter } from "./common/all-exceptions.filter";
-import { HttpAdapterHost } from "@nestjs/core";
-import * as dotenv from "dotenv";
+import { AppModule } from "./app.module";
 dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter()
+    new FastifyAdapter(),
+    {
+      bodyParser: false,
+    }
   );
   app.useLogger(new Logger());
 
   const httpAdapterHost = app.get(HttpAdapterHost);
   app.useGlobalFilters(new AllExceptionsFilter(httpAdapterHost));
 
-  // Swagger configuration
   const config = new DocumentBuilder()
     .setTitle("My NestJS API")
     .setDescription("API documentation for my NestJS project")
@@ -61,7 +62,7 @@ async function bootstrap() {
         return callback(null, true);
       }
 
-      return callback(new Error("Not allowed by CORS"));
+      return callback(new Error("Not allowed by CORS"), false);
     },
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
     credentials: true,
