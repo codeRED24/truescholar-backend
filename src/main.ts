@@ -35,25 +35,23 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup("api", app, document);
 
-  const allowedOrigins = [
-    "*",
-    process.env.FRONTEND_URL || "",
-    process.env.STAGING_FRONTEND_URL || "",
-    process.env.DEV_FRONTEND_URL || "",
-    "https://main.d11ru2go6oqfip.amplifyapp.com",
-    "https://stage.d3lclg6mfctqxo.amplifyapp.com", // CMS Stage
-    "https://stage.d3idi0ktyuzfgf.amplifyapp.com", // Kapp Stage
-    "*",
-  ];
+  // Environment-specific CORS origins
+  const nodeEnv = process.env.NODE_ENV || "dev";
+  let allowedOrigins: string[] = [];
 
-  if (process.env.NODE_ENV !== "production") {
-    allowedOrigins.push(
+  if (nodeEnv === "dev" || nodeEnv === "development") {
+    // Dev: localhost + DEV_FRONTEND_URL
+    allowedOrigins = [
       "http://localhost:3000",
       "http://localhost:3001",
-      "http://localhost:8000",
       "http://localhost:3002",
-      "*"
-    );
+      "http://localhost:8000",
+      process.env.DEV_FRONTEND_URL || "",
+    ].filter(Boolean);
+  } else if (nodeEnv === "staging" || nodeEnv === "stage") {
+    allowedOrigins = [process.env.STAGING_FRONTEND_URL || ""].filter(Boolean);
+  } else if (nodeEnv === "production" || nodeEnv === "prod") {
+    allowedOrigins = [process.env.FRONTEND_URL || ""].filter(Boolean);
   }
 
   app.enableCors({

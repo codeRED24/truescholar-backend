@@ -27,13 +27,21 @@ const pool = new Pool({
 export const auth = betterAuth({
   baseURL: process.env.BACKEND_URL || "http://localhost:8001",
   basePath: "/api/auth",
-  trustedOrigins: [
-    "http://localhost:3000",
-    "http://localhost:3001",
-    process.env.FRONTEND_URL || "",
-    process.env.STAGING_FRONTEND_URL || "",
-    process.env.DEV_FRONTEND_URL || "",
-  ].filter(Boolean),
+  trustedOrigins: (() => {
+    const nodeEnv = process.env.NODE_ENV || "dev";
+    if (nodeEnv === "dev" || nodeEnv === "development") {
+      return [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        process.env.DEV_FRONTEND_URL || "",
+      ].filter(Boolean);
+    } else if (nodeEnv === "staging") {
+      return [process.env.STAGING_FRONTEND_URL || ""].filter(Boolean);
+    } else if (nodeEnv === "production") {
+      return [process.env.FRONTEND_URL || ""].filter(Boolean);
+    }
+    return [];
+  })(),
   database: pool,
 
   // Extend user schema with additional profile fields
