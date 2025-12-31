@@ -29,6 +29,9 @@ import { Country } from "../../helper_entities/country/country.entity";
 import { CollegeWiseCourse } from "../college-wise-course/college_wise_course.entity";
 import { Stream } from "../../helper_entities/stream/stream.entity";
 import { LeadForm } from "../../helper_entities/lead-form/lead-form.entity";
+import { Member } from "../../authentication_module/better-auth/entities/member.entity";
+import { Invitation } from "../../authentication_module/better-auth/entities/invitation.entity";
+import { FollowCollege } from "../../followers/follow-college.entity";
 
 @Entity()
 @Unique(["slug"])
@@ -146,6 +149,13 @@ export class CollegeInfo {
   @Column({ type: "varchar", nullable: true })
   college_brochure: string;
 
+  @Column({ type: "text", nullable: true })
+  metadata?: string;
+
+  // Email domains for auto-linking (e.g., ["@iitd.ac.in", "@iitdelhi.ac.in"])
+  @Column({ type: "text", array: true, nullable: true })
+  emailDomains?: string[];
+
   // @Column({ type: "varchar", nullable: true })
   // area?: string;
 
@@ -231,4 +241,13 @@ export class CollegeInfo {
 
   @OneToMany(() => LeadForm, (leadForm) => leadForm.college)
   leadForms: LeadForm[];
+
+  @OneToMany(() => Member, (member) => member.college)
+  members: Member[];
+
+  @OneToMany(() => Invitation, (invitation) => invitation.college)
+  invitations: Invitation[];
+
+  @OneToMany(() => FollowCollege, (follow) => follow.college)
+  followers: FollowCollege[];
 }

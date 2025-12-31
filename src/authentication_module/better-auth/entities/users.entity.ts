@@ -12,6 +12,8 @@ import {
 import { Session } from "./session.entity";
 import { Account } from "./account.entity";
 import { CollegeInfo } from "../../../college/college-info/college-info.entity";
+import { Member } from "./member.entity";
+import { Invitation } from "./invitation.entity";
 
 @Entity({ name: "user" })
 export class User {
@@ -98,4 +100,10 @@ export class User {
 
   @OneToMany(() => Account, (account) => account.user)
   accounts: Account[];
+
+  @OneToMany(() => Member, (member) => member.user)
+  members: Member[];
+
+  @OneToMany(() => Invitation, (invitation) => invitation.inviter)
+  sentInvitations: Invitation[];
 }

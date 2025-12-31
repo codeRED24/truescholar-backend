@@ -1,7 +1,8 @@
 import { CollegeSearchModule } from "./college/college-search/college-search.module";
 import { CompareModule } from "./college/compare/compare.module";
-import { Module } from "@nestjs/common";
+import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import { LoggerModule, LoggerMiddleware } from "./common/logger";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { CitiesModule } from "./helper_entities/cities/cities.module";
@@ -54,9 +55,22 @@ import { BetterAuthModule } from "./authentication_module/better-auth/better-aut
 import { ReelsModule } from "./reels/reels.module";
 import { ReviewsModule } from "./reviews/reviews.module";
 import { ProfileModule } from "./profile/profile.module";
+import { SharedModule } from "./shared/shared.module";
+import { PostsModule } from "./posts/posts.module";
+import { ConnectionsModule } from "./connections/connections.module";
+import { CommentsModule } from "./comments/comments.module";
+import { LikesModule } from "./likes/likes.module";
+import { JobsModule } from "./jobs/jobs.module";
+import { NotificationsModule } from "./notifications/notifications.module";
+import { MessagingModule } from "./messaging/messaging.module";
+import { FollowersModule } from "./followers/followers.module";
+import { CollegeMemberModule } from "./college-member/college-member.module";
+import { CaslModule } from "./casl";
+import { CollegeOnboardingModule } from "./college-onboarding/college-onboarding.module";
 
 @Module({
   imports: [
+    LoggerModule,
     BetterAuthModule,
     CollegeSearchModule,
     CompareModule,
@@ -121,8 +135,24 @@ import { ProfileModule } from "./profile/profile.module";
     ReelsModule,
     ReviewsModule,
     ProfileModule,
+    SharedModule,
+    PostsModule,
+    ConnectionsModule,
+    CommentsModule,
+    LikesModule,
+    JobsModule,
+    NotificationsModule,
+    MessagingModule,
+    FollowersModule,
+    CollegeMemberModule,
+    CaslModule,
+    CollegeOnboardingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(LoggerMiddleware).forRoutes("*");
+  }
+}

@@ -3,12 +3,11 @@ import { Pool } from "pg";
 import {
   openAPI,
   phoneNumber,
-  organization,
   admin,
   emailOTP,
+  oneTap,
 } from "better-auth/plugins";
 import { sendEmail } from "./email";
-import { ac, owner, collegeAdmin, student, alumni } from "./permissions";
 
 // Generate a unique custom code for referrals
 function generateCustomCode(name: string): string {
@@ -32,6 +31,8 @@ export const auth = betterAuth({
     "http://localhost:3000",
     "http://localhost:3001",
     process.env.FRONTEND_URL || "",
+    process.env.STAGING_FRONTEND_URL || "",
+    process.env.DEV_FRONTEND_URL || "",
   ].filter(Boolean),
   database: pool,
 
@@ -101,7 +102,21 @@ export const auth = betterAuth({
         user.email
       );
 
-      console.log(`Password reset email sent to ${user.email}`);
+      console.log(`*** Password reset email sent to ${user.email}`);
+    },
+  },
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+    },
+    linkedin: {
+      clientId: process.env.LINKEDIN_CLIENT_ID as string,
+      clientSecret: process.env.LINKEDIN_CLIENT_SECRET as string,
+    },
+    facebook: {
+      clientId: process.env.FACEBOOK_CLIENT_ID as string,
+      clientSecret: process.env.FACEBOOK_CLIENT_SECRET as string,
     },
   },
   rateLimit: {
@@ -109,6 +124,13 @@ export const auth = betterAuth({
     customRules: {
       "/api/auth/email-otp/send-verification-otp": { window: 60, max: 3 },
       "/api/auth/phone-number/send-otp": { window: 60, max: 3 },
+    },
+  },
+  session: {
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60,
+      strategy: "jwt",
     },
   },
   plugins: [
@@ -128,7 +150,7 @@ export const auth = betterAuth({
           },
           email
         );
-        console.log(`📧 Email OTP ${otp} sent to ${email} (type: ${type})`);
+        console.log(`*** Email OTP ${otp} sent to ${email} (type: ${type})`);
       },
       otpLength: 6,
       expiresIn: 600,
@@ -137,45 +159,17 @@ export const auth = betterAuth({
     phoneNumber({
       sendOTP: async ({ phoneNumber: phone, code }, ctx) => {
         // TODO: Integrate with SMS provider (Twilio, MSG91, etc.)
-        console.log(`📱 Phone OTP ${code} sent to ${phone}`);
+        console.log(`*** Phone OTP ${code} sent to ${phone}`);
 
-        // For development, you can also send via email if needed
         // await sendEmail(...);
       },
     }),
     openAPI(),
-    organization({
-      ac,
-      roles: {
-        owner,
-        admin: collegeAdmin,
-        student,
-        alumni,
-      },
-      invitationExpiresIn: 7 * 24 * 60 * 60,
-      sendInvitationEmail: async ({ email, organization, inviter, role }) => {
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-        const inviteUrl = `${frontendUrl}/invite?org=${organization.id}`;
-
-        await sendEmail(
-          `You're invited to join ${organization.name} on TrueScholar`,
-          "organization-invite",
-          {
-            inviterName: inviter.user.name || "A member",
-            organizationName: organization.name,
-            role: role,
-            inviteUrl: inviteUrl,
-          },
-          email
-        );
-
-        console.log(`Invitation sent to ${email} for ${organization.name}`);
-      },
-    }),
     admin({
       defaultRole: "user",
       adminRole: "admin",
     }),
+    oneTap(),
   ],
   databaseHooks: {
     user: {
@@ -183,7 +177,7 @@ export const auth = betterAuth({
         before: async (user) => {
           // Generate unique custom_code for new users
           const customCode = generateCustomCode(user.name || "");
-          console.log(`🔑 Generating custom_code ${customCode} for new user`);
+          console.log(`*** Generating custom_code ${customCode} for new user`);
           return {
             data: {
               ...user,

@@ -8,32 +8,33 @@ import {
   Index,
 } from "typeorm";
 import { User } from "./users.entity";
-import { Organization } from "./organization.entity";
+import { CollegeInfo } from "../../../college/college-info/college-info.entity";
 
 @Entity({ name: "invitation" })
 export class Invitation {
   @PrimaryColumn({ type: "text" })
   id: string;
 
-  @Index("invitation_organizationId_idx")
-  @Column({ type: "text" })
-  organizationId: string;
+  @Index()
+  @Column({ type: "int" })
+  collegeId: number;
 
-  @ManyToOne(() => Organization, (org) => org.invitations, {
-    onDelete: "CASCADE",
-  })
-  @JoinColumn({ name: "organizationId" })
-  organization: Organization;
+  @ManyToOne(() => CollegeInfo, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "collegeId", referencedColumnName: "college_id" })
+  college: CollegeInfo;
 
-  @Index("invitation_email_idx")
+  @Index()
   @Column({ type: "text" })
   email: string;
+
+  @Column({ type: "text", nullable: true })
+  phoneNumber: string | null;
 
   @Column({ type: "text", nullable: true })
   role: string | null;
 
   @Column({ type: "text" })
-  status: string;
+  status: string; // 'pending' | 'accepted' | 'rejected' | 'expired'
 
   @Column({ type: "timestamptz" })
   expiresAt: Date;
@@ -47,4 +48,10 @@ export class Invitation {
   @ManyToOne(() => User, { onDelete: "CASCADE" })
   @JoinColumn({ name: "inviterId" })
   inviter: User;
+
+  @Column({ type: "text", nullable: true, unique: true })
+  inviteToken: string | null;
+
+  @Column({ type: "text", nullable: true })
+  source: string | null; // 'bulk_import' | 'manual'
 }

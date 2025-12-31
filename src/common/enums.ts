@@ -48,33 +48,30 @@ export enum CourseLevel {
 }
 
 export enum DurationType {
-  YEARS="Years",
-  MONTHS="Months",
-  DAYS="Days",
-  WEEK="Weeks",
+  YEARS = "Years",
+  MONTHS = "Months",
+  DAYS = "Days",
+  WEEK = "Weeks",
 }
 
 export enum CourseType {
-  HONOURS="Honours",
-  LATERAL_ENTRY="Lateral Entry",
-  CERTIFICATE="Certificate",
-  DEGREE="Degree",
-  DIPLOMA="Diploma"
+  HONOURS = "Honours",
+  LATERAL_ENTRY = "Lateral Entry",
+  CERTIFICATE = "Certificate",
+  DEGREE = "Degree",
+  DIPLOMA = "Diploma",
 }
 
 export enum CourseMode {
-  FULL_TIME="Full-Time",
-  PART_TIME="Part-Time",
-  ONLINE="Online"
-  
+  FULL_TIME = "Full-Time",
+  PART_TIME = "Part-Time",
+  ONLINE = "Online",
 }
 
 export enum CourseLevels {
-  UG="Ug",
-  PG="Pg",
+  UG = "Ug",
+  PG = "Pg",
 }
-
-
 
 export enum StatusType {
   PENDING = "Pending",
@@ -93,7 +90,7 @@ export enum LogType {
   USER = "user",
   EXAMS = "exam",
   ARTICLE = "article",
-  COURSE= "course"
+  COURSE = "course",
 }
 
 export enum RequestType {
@@ -110,18 +107,18 @@ export enum ArticleType {
 
 export enum Category {
   GENERAL = "General",
-  SC="Sc",
-  ST="St",
-  OBC="Obc",
-  NRI="Nri"
+  SC = "Sc",
+  ST = "St",
+  OBC = "Obc",
+  NRI = "Nri",
 }
 
-export enum Type{
-  YEAR="Year",
-  SEMESTER="Semester",
-  TRIMESTER="Trimester",
-  QUARTER="Quarter",
-  TOTAL="Total"
+export enum Type {
+  YEAR = "Year",
+  SEMESTER = "Semester",
+  TRIMESTER = "Trimester",
+  QUARTER = "Quarter",
+  TOTAL = "Total",
 }
 export enum CourseGroupType {
   COURSE = "course_id",
@@ -129,9 +126,21 @@ export enum CourseGroupType {
 }
 
 export enum ArticleTagType {
-  COLLEGE = 'college_id',
-  COURSES = 'course_id',
-  EXAMS = 'exam_id',
-  COURSE_GROUP = 'course_group_id',
+  COLLEGE = "college_id",
+  COURSES = "course_id",
+  EXAMS = "exam_id",
+  COURSE_GROUP = "course_group_id",
 }
 
+// Platform-level roles (stored in user.role via Better Auth admin plugin)
+export enum UserRole {
+  ADMIN = "admin", // Platform super-admin
+  USER = "user", // Regular user (default)
+}
+
+// College-level roles (stored in member.role)
+export enum CollegeRole {
+  COLLEGE_ADMIN = "college_admin",
+  STUDENT = "student",
+  ALUMNI = "alumni",
+}

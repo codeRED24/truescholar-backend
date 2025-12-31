@@ -19,12 +19,12 @@
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": false,
     "esModuleInterop": true,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "paths": {
+      "@shared/*": ["src/shared/*"],
+      "@/*": ["src/*"]
+    }
   },
-  "include": [
-    "src/**/*.ts",
-    "test/**/*.ts",
-    "other-folder/**/*.ts"
-  ],
+  "include": ["src/**/*.ts", "test/**/*.ts", "other-folder/**/*.ts"],
   "exclude": ["**/*.spec.ts"]
 }

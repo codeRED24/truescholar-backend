@@ -2,27 +2,28 @@ import {
   Entity,
   Column,
   PrimaryColumn,
+  CreateDateColumn,
   ManyToOne,
   JoinColumn,
   Index,
 } from "typeorm";
 import { User } from "./users.entity";
-import { Organization } from "./organization.entity";
+import { CollegeInfo } from "../../../college/college-info/college-info.entity";
 
 @Entity({ name: "member" })
 export class Member {
   @PrimaryColumn({ type: "text" })
   id: string;
 
-  @Index("member_organizationId_idx")
-  @Column({ type: "text" })
-  organizationId: string;
+  @Index()
+  @Column({ type: "int" })
+  collegeId: number;
 
-  @ManyToOne(() => Organization, (org) => org.members, { onDelete: "CASCADE" })
-  @JoinColumn({ name: "organizationId" })
-  organization: Organization;
+  @ManyToOne(() => CollegeInfo, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "collegeId", referencedColumnName: "college_id" })
+  college: CollegeInfo;
 
-  @Index("member_userId_idx")
+  @Index()
   @Column({ type: "text" })
   userId: string;
 
@@ -33,6 +34,6 @@ export class Member {
   @Column({ type: "text" })
   role: string;
 
-  @Column({ type: "timestamptz" })
+  @CreateDateColumn({ type: "timestamptz" })
   createdAt: Date;
 }
