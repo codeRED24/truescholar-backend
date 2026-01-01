@@ -45,7 +45,7 @@ async function bootstrap() {
       "http://localhost:3000",
       "http://localhost:3001",
       "http://localhost:3002",
-      "http://localhost:8000",
+      "http://localhost:8001",
       process.env.DEV_FRONTEND_URL || "",
     ].filter(Boolean);
   } else if (nodeEnv === "staging" || nodeEnv === "stage") {

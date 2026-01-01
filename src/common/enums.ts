@@ -144,3 +144,16 @@ export enum CollegeRole {
   STUDENT = "student",
   ALUMNI = "alumni",
 }
+
+export enum AuthorType {
+  USER = "user",
+  COLLEGE = "college",
+}
+
+export enum PostType {
+  GENERAL = "general",
+  ANNOUNCEMENT = "announcement",
+  EVENT = "event",
+  ACHIEVEMENT = "achievement",
+  NEWS = "news",
+}

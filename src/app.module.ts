@@ -56,10 +56,10 @@ import { ReelsModule } from "./reels/reels.module";
 import { ReviewsModule } from "./reviews/reviews.module";
 import { ProfileModule } from "./profile/profile.module";
 import { SharedModule } from "./shared/shared.module";
-// import { PostsModule } from "./posts/posts.module";
+import { PostsModule } from "./posts/posts.module";
 import { ConnectionsModule } from "./connections/connections.module";
-// import { CommentsModule } from "./comments/comments.module";
-// import { LikesModule } from "./likes/likes.module";
+import { CommentsModule } from "./comments/comments.module";
+import { LikesModule } from "./likes/likes.module";
 // import { JobsModule } from "./jobs/jobs.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 // import { MessagingModule } from "./messaging/messaging.module";
@@ -136,10 +136,10 @@ import { CollegeOnboardingModule } from "./college-onboarding/college-onboarding
     ReviewsModule,
     ProfileModule,
     SharedModule,
-    // PostsModule,
+    PostsModule,
     ConnectionsModule,
-    // CommentsModule,
-    // LikesModule,
+    CommentsModule,
+    LikesModule,
     // JobsModule,
     NotificationsModule,
     // MessagingModule,

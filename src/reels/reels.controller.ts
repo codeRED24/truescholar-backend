@@ -17,7 +17,7 @@ import {
 import { ReelsService } from "./reels.service";
 import { CreateReelDto } from "./dto/create-reel.dto";
 import { UpdateReelDto } from "./dto/update-reel.dto";
-import { ApiBody, ApiConsumes, ApiBearerAuth } from "@nestjs/swagger";
+import { ApiBody, ApiConsumes, ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { AnyFilesInterceptor } from "@nest-lab/fastify-multer";
 import { sendEmail } from "../utils/email";
 import { AuthGuard } from "../authentication_module/better-auth/guards/auth.guard";
@@ -25,6 +25,7 @@ import { User as UserDecorator } from "../authentication_module/better-auth/deco
 import { User } from "../authentication_module/better-auth/entities";
 
 @Controller("reels")
+@ApiTags("reels")
 export class ReelsController {
   constructor(private readonly reelsService: ReelsService) {}
 

@@ -20,13 +20,14 @@ import {
   ExperienceEntryDto,
   EducationEntryDto,
 } from "./profile.dto";
-import { ApiBearerAuth, ApiConsumes } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiConsumes, ApiTags } from "@nestjs/swagger";
 import { AuthGuard } from "src/authentication_module/better-auth/guards/auth.guard";
 import { User as UserDecorator } from "../authentication_module/better-auth/decorators/auth.decorators";
 import { User } from "better-auth/types";
 import { FileUploadService } from "src/utils/file-upload/fileUpload.service";
 
 @Controller("profile")
+@ApiTags("Profile")
 export class ProfileController {
   constructor(
     private readonly profileService: ProfileService,
