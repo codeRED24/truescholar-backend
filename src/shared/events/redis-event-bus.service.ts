@@ -24,6 +24,8 @@ export class RedisEventBusService
   private subscriber: Redis | null = null;
   private readonly handlers = new Map<string, Set<EventHandler<DomainEvent>>>();
   private readonly channelPrefix = "domain_events:";
+  private subscriberReady = false;
+  private readonly pendingSubscriptions: string[] = [];
 
   async onModuleInit() {
     try {
@@ -50,8 +52,11 @@ export class RedisEventBusService
         console.log("[EventBus] Redis publisher connected");
       });
 
-      this.subscriber.on("connect", () => {
-        console.log("[EventBus] Redis subscriber connected");
+      // Use 'ready' event instead of 'connect' to avoid race condition
+      this.subscriber.on("ready", () => {
+        console.log("[EventBus] Redis subscriber ready");
+        this.subscriberReady = true;
+        this.processPendingSubscriptions();
       });
 
       this.publisher.on("error", (err) => {
@@ -59,10 +64,32 @@ export class RedisEventBusService
       });
 
       this.subscriber.on("error", (err) => {
-        console.error("[EventBus] Redis subscriber error:", err.message);
+        // Ignore subscriber mode errors during ready check
+        if (!err.message.includes("subscriber mode")) {
+          console.error("[EventBus] Redis subscriber error:", err.message);
+        }
       });
     } catch (error) {
       console.error("[EventBus] Failed to initialize Redis:", error);
+    }
+  }
+
+  /**
+   * Process any subscriptions that were queued before subscriber was ready
+   */
+  private processPendingSubscriptions() {
+    if (!this.subscriber || !this.subscriberReady) return;
+
+    while (this.pendingSubscriptions.length > 0) {
+      const channel = this.pendingSubscriptions.shift()!;
+      this.subscriber.subscribe(channel, (err) => {
+        if (err) {
+          console.error(`[EventBus] Failed to subscribe to ${channel}:`, err);
+        } else {
+          const eventType = channel.replace(this.channelPrefix, "");
+          console.log(`[EventBus] Subscribed to event: ${eventType}`);
+        }
+      });
     }
   }
 
@@ -112,8 +139,8 @@ export class RedisEventBusService
     if (!this.handlers.has(eventType)) {
       this.handlers.set(eventType, new Set());
 
-      // Subscribe to Redis channel
-      if (this.subscriber) {
+      // Queue or subscribe to Redis channel
+      if (this.subscriber && this.subscriberReady) {
         this.subscriber.subscribe(channel, (err) => {
           if (err) {
             console.error(
@@ -124,6 +151,9 @@ export class RedisEventBusService
             console.log(`[EventBus] Subscribed to event: ${eventType}`);
           }
         });
+      } else {
+        // Queue for later when subscriber is ready
+        this.pendingSubscriptions.push(channel);
       }
     }
 

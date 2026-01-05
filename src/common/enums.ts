@@ -157,3 +157,21 @@ export enum PostType {
   ACHIEVEMENT = "achievement",
   NEWS = "news",
 }
+
+export enum OrganizerType {
+  USER = "user",
+  COLLEGE = "college",
+}
+
+export enum RSVPStatus {
+  BOOKED = "booked",
+  INTERESTED = "interested",
+  NOT_GOING = "not_going",
+}
+
+export enum SearchEntityType {
+  USER = "user",
+  COLLEGE = "college",
+  EVENT = "event",
+  POST = "post",
+}

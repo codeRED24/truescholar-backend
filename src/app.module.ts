@@ -67,6 +67,9 @@ import { FollowersModule } from "./followers/followers.module";
 import { CollegeMemberModule } from "./college-member/college-member.module";
 import { CaslModule } from "./casl";
 import { CollegeOnboardingModule } from "./college-onboarding/college-onboarding.module";
+import { EventsModule } from "./events/events.module";
+import { SearchIndexModule } from "./helper_entities/search-index/search-index.module";
+import { FeedModule } from "./feed/feed.module";
 
 @Module({
   imports: [
@@ -147,6 +150,9 @@ import { CollegeOnboardingModule } from "./college-onboarding/college-onboarding
     CollegeMemberModule,
     CaslModule,
     CollegeOnboardingModule,
+    EventsModule,
+    SearchIndexModule,
+    FeedModule,
   ],
   controllers: [AppController],
   providers: [AppService],

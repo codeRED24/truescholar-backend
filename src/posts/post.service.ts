@@ -13,11 +13,12 @@ import { AuthorType, PostType } from "@/common/enums";
 import { DomainEvent } from "../shared/events/domain-event";
 
 export class PostCreatedEvent extends DomainEvent {
-  readonly eventType = "posts.created";
+  readonly eventType = "post.created";
   constructor(
     public readonly postId: string,
     public readonly authorId: string,
-    public readonly visibility: string
+    public readonly visibility: string,
+    public readonly content: string
   ) {
     super(postId);
   }
@@ -26,12 +27,26 @@ export class PostCreatedEvent extends DomainEvent {
       postId: this.postId,
       authorId: this.authorId,
       visibility: this.visibility,
+      content: this.content,
     };
   }
 }
 
+export class PostUpdatedEvent extends DomainEvent {
+  readonly eventType = "post.updated";
+  constructor(
+    public readonly postId: string,
+    public readonly content: string
+  ) {
+    super(postId);
+  }
+  protected getPayload() {
+    return { postId: this.postId, content: this.content };
+  }
+}
+
 export class PostDeletedEvent extends DomainEvent {
-  readonly eventType = "posts.deleted";
+  readonly eventType = "post.deleted";
   constructor(
     public readonly postId: string,
     public readonly authorId: string
@@ -69,7 +84,7 @@ export class PostsService {
       taggedCollegeId,
     });
     await this.eventBus.publish(
-      new PostCreatedEvent(post.id, authorId, post.visibility)
+      new PostCreatedEvent(post.id, authorId, post.visibility, content)
     );
     return post;
   }
@@ -126,13 +141,19 @@ export class PostsService {
     if (!post) throw new NotFoundException("Post not found");
     if (post.authorId !== userId)
       throw new ForbiddenException("You can only edit your own posts");
-    return this.postRepository.update(postId, {
+    const updatedPost = (await this.postRepository.update(postId, {
       content,
       media,
       visibility,
       type,
       taggedCollegeId,
-    }) as Promise<Post>;
+    })) as Post;
+
+    // Emit update event for search indexing
+    const finalContent = content || post.content;
+    await this.eventBus.publish(new PostUpdatedEvent(postId, finalContent));
+
+    return updatedPost;
   }
 
   async deletePost(postId: string, userId: string): Promise<void> {
