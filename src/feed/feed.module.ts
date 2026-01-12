@@ -8,16 +8,15 @@ import { Post } from "../posts/post.entity";
 // Services
 import { FeedService } from "./feed.service";
 import { FeedCacheService } from "./feed-cache.service";
-import { FeedFanoutService } from "./feed-fanout.service";
 import { TrendingService } from "./trending.service";
 
 // Controller
 import { FeedController } from "./feed.controller";
+import { FeedEventController } from "./feed-event.controller";
 
 // Dependencies
 import { ConnectionsModule } from "../connections/connections.module";
 import { LikesModule } from "../likes/likes.module";
-import { SharedModule } from "../shared/shared.module";
 
 @Module({
   imports: [
@@ -25,15 +24,9 @@ import { SharedModule } from "../shared/shared.module";
     ScheduleModule.forRoot(),
     ConnectionsModule,
     LikesModule,
-    SharedModule,
   ],
-  providers: [
-    FeedService,
-    FeedCacheService,
-    FeedFanoutService,
-    TrendingService,
-  ],
-  controllers: [FeedController],
+  providers: [FeedService, FeedCacheService, TrendingService],
+  controllers: [FeedController, FeedEventController],
   exports: [FeedService, FeedCacheService],
 })
 export class FeedModule {}

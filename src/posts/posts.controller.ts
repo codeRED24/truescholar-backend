@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
+import { Throttle, ThrottlerGuard } from "@nestjs/throttler";
 import { AuthGuard } from "../authentication_module/better-auth/guards/auth.guard";
 import { User } from "../authentication_module/better-auth/decorators/auth.decorators";
 import { PostsService } from "./post.service";
@@ -77,6 +78,8 @@ export class PostsController {
 
   @Put(":id")
   @ApiOperation({ summary: "Update a post" })
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ like: { limit: 30, ttl: 60000 } })
   async updatePost(
     @User() user: { id: string },
     @Param("id") postId: string,
@@ -104,6 +107,8 @@ export class PostsController {
 
   @Post(":id/like")
   @ApiOperation({ summary: "Like a post" })
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ like: { limit: 30, ttl: 60000 } })
   async likePost(@User() user: { id: string }, @Param("id") postId: string) {
     await this.likesService.likePost(user.id, postId);
     return { success: true };
@@ -111,6 +116,8 @@ export class PostsController {
 
   @Delete(":id/like")
   @ApiOperation({ summary: "Unlike a post" })
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ like: { limit: 30, ttl: 60000 } })
   async unlikePost(@User() user: { id: string }, @Param("id") postId: string) {
     await this.likesService.unlikePost(user.id, postId);
     return { success: true };

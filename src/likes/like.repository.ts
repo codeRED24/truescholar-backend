@@ -56,4 +56,21 @@ export class LikeRepository {
     }
     return result;
   }
+
+  async getLikeStatusForComments(
+    userId: string,
+    commentIds: string[]
+  ): Promise<Map<string, boolean>> {
+    if (commentIds.length === 0) return new Map();
+    const likes = await this.repo.find({
+      where: { userId, commentId: In(commentIds) },
+      select: ["commentId"],
+    });
+    const likedCommentIds = new Set(likes.map((l) => l.commentId));
+    const result = new Map<string, boolean>();
+    for (const commentId of commentIds) {
+      result.set(commentId, likedCommentIds.has(commentId));
+    }
+    return result;
+  }
 }

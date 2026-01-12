@@ -6,6 +6,7 @@ import { PostsService } from "./post.service";
 import { PostsController } from "./posts.controller";
 import { ConnectionsModule } from "src/connections/connections.module";
 import { LikesModule } from "src/likes/likes.module";
+import { FeedCacheService } from "src/feed/feed-cache.service";
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { LikesModule } from "src/likes/likes.module";
     forwardRef(() => LikesModule),
   ],
   controllers: [PostsController],
-  providers: [PostRepository, PostsService],
+  providers: [PostRepository, PostsService, FeedCacheService],
   exports: [PostsService],
 })
 export class PostsModule {}

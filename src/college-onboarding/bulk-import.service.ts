@@ -2,9 +2,11 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  OnModuleInit,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
+import { ClientKafka } from "@nestjs/microservices";
 import { Invitation } from "../authentication_module/better-auth/entities/invitation.entity";
 import { CollegeInfo } from "../college/college-info/college-info.entity";
 import { User } from "../authentication_module/better-auth/entities/users.entity";
@@ -12,8 +14,8 @@ import { CollegeRole } from "../common/enums";
 import { ImportResultDto } from "./dto";
 import * as XLSX from "xlsx";
 import { Inject } from "@nestjs/common";
-import { IEventBus, EVENT_BUS } from "../shared/events";
-import { EmailSendEvent } from "../notifications/events/email-send.event";
+import { KAFKA_SERVICE } from "../shared/kafka/kafka.module";
+import { randomUUID } from "crypto";
 
 interface ImportRow {
   email: string;
@@ -26,7 +28,7 @@ interface ImportRow {
 const INVITE_EXPIRY_DAYS = 10;
 
 @Injectable()
-export class BulkImportService {
+export class BulkImportService implements OnModuleInit {
   constructor(
     @InjectRepository(Invitation)
     private invitationRepository: Repository<Invitation>,
@@ -34,8 +36,12 @@ export class BulkImportService {
     private collegeRepository: Repository<CollegeInfo>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
-    @Inject(EVENT_BUS) private readonly eventBus: IEventBus
+    @Inject(KAFKA_SERVICE) private readonly kafkaClient: ClientKafka
   ) {}
+
+  async onModuleInit() {
+    await this.kafkaClient.connect();
+  }
 
   /**
    * Process bulk import file (CSV/XLS)
@@ -129,12 +135,12 @@ export class BulkImportService {
     }
 
     // Generate unique invite token
-    const inviteToken = crypto.randomUUID();
+    const inviteToken = randomUUID();
     const role = (row.role as CollegeRole) || defaultRole;
 
     // Create invitation
     const invitation = this.invitationRepository.create({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       collegeId,
       email,
       phoneNumber: row.phone?.toString() || null,
@@ -154,19 +160,23 @@ export class BulkImportService {
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
     const inviteUrl = `${frontendUrl}/invite/${inviteToken}`;
 
-    await this.eventBus.publish(
-      new EmailSendEvent(
-        email,
-        `You're invited to join ${college.college_name} on TrueScholar`,
-        "college-invite",
-        {
+    this.kafkaClient.emit("email.send", {
+      eventId: randomUUID(),
+      eventType: "email.send",
+      aggregateId: invitation.id,
+      occurredAt: new Date().toISOString(),
+      payload: {
+        recipient: email,
+        subject: `You're invited to join ${college.college_name} on TrueScholar`,
+        template: "college-invite",
+        context: {
           collegeName: college.college_name,
           inviteUrl,
           role,
           name: row.name || "there",
-        }
-      )
-    );
+        },
+      },
+    });
 
     // TODO: WhatsApp integration
     // if (row.phone) {

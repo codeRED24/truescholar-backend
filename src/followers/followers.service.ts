@@ -4,13 +4,15 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  OnModuleInit,
 } from "@nestjs/common";
-import { IEventBus, EVENT_BUS } from "../shared/events";
+import { ClientKafka } from "@nestjs/microservices";
+import { KAFKA_SERVICE } from "../shared/kafka/kafka.module";
 import { Follow } from "./follow.entity";
 import { FollowCollege } from "./follow-college.entity";
 import { FollowRepository } from "./follow.repository";
 import { FollowCollegeRepository } from "./follow-college.repository";
-import { DomainEvent } from "../shared/events/domain-event";
+import { randomUUID } from "crypto";
 import {
   FollowEntry,
   FollowStats,
@@ -18,82 +20,17 @@ import {
   FollowCollegeEntry,
 } from "./follow.dto";
 
-// Events
-export class FollowCreatedEvent extends DomainEvent {
-  readonly eventType = "follows.created";
-  constructor(
-    public readonly followId: string,
-    public readonly followerId: string,
-    public readonly followingId: string
-  ) {
-    super(followId);
-  }
-  protected getPayload() {
-    return {
-      followId: this.followId,
-      followerId: this.followerId,
-      followingId: this.followingId,
-    };
-  }
-}
-
-export class FollowRemovedEvent extends DomainEvent {
-  readonly eventType = "follows.removed";
-  constructor(
-    public readonly followerId: string,
-    public readonly followingId: string
-  ) {
-    super(`${followerId}-${followingId}`);
-  }
-  protected getPayload() {
-    return {
-      followerId: this.followerId,
-      followingId: this.followingId,
-    };
-  }
-}
-
-export class CollegeFollowCreatedEvent extends DomainEvent {
-  readonly eventType = "follows.college.created";
-  constructor(
-    public readonly followId: string,
-    public readonly followerId: string,
-    public readonly collegeId: number
-  ) {
-    super(followId);
-  }
-  protected getPayload() {
-    return {
-      followId: this.followId,
-      followerId: this.followerId,
-      collegeId: this.collegeId,
-    };
-  }
-}
-
-export class CollegeFollowRemovedEvent extends DomainEvent {
-  readonly eventType = "follows.college.removed";
-  constructor(
-    public readonly followerId: string,
-    public readonly collegeId: number
-  ) {
-    super(`${followerId}-college-${collegeId}`);
-  }
-  protected getPayload() {
-    return {
-      followerId: this.followerId,
-      collegeId: this.collegeId,
-    };
-  }
-}
-
 @Injectable()
-export class FollowersService {
+export class FollowersService implements OnModuleInit {
   constructor(
     private readonly followRepository: FollowRepository,
     private readonly followCollegeRepository: FollowCollegeRepository,
-    @Inject(EVENT_BUS) private readonly eventBus: IEventBus
+    @Inject(KAFKA_SERVICE) private readonly kafkaClient: ClientKafka
   ) {}
+
+  async onModuleInit() {
+    await this.kafkaClient.connect();
+  }
 
   async follow(followerId: string, followingId: string): Promise<Follow> {
     if (followerId === followingId) {
@@ -109,9 +46,19 @@ export class FollowersService {
     }
 
     const follow = await this.followRepository.create(followerId, followingId);
-    await this.eventBus.publish(
-      new FollowCreatedEvent(follow.id, followerId, followingId)
-    );
+
+    this.kafkaClient.emit("follows.created", {
+      eventId: randomUUID(),
+      eventType: "follows.created",
+      aggregateId: follow.id,
+      occurredAt: new Date().toISOString(),
+      payload: {
+        followId: follow.id,
+        followerId,
+        followingId,
+      },
+    });
+
     return follow;
   }
 
@@ -125,9 +72,16 @@ export class FollowersService {
       throw new NotFoundException("Not following this user");
     }
 
-    await this.eventBus.publish(
-      new FollowRemovedEvent(followerId, followingId)
-    );
+    this.kafkaClient.emit("follows.removed", {
+      eventId: randomUUID(),
+      eventType: "follows.removed",
+      aggregateId: `${followerId}-${followingId}`,
+      occurredAt: new Date().toISOString(),
+      payload: {
+        followerId,
+        followingId,
+      },
+    });
   }
 
   async followCollege(
@@ -146,9 +100,19 @@ export class FollowersService {
       followerId,
       collegeId
     );
-    await this.eventBus.publish(
-      new CollegeFollowCreatedEvent(follow.id, followerId, collegeId)
-    );
+
+    this.kafkaClient.emit("follows.college.created", {
+      eventId: randomUUID(),
+      eventType: "follows.college.created",
+      aggregateId: follow.id,
+      occurredAt: new Date().toISOString(),
+      payload: {
+        followId: follow.id,
+        followerId,
+        collegeId,
+      },
+    });
+
     return follow;
   }
 
@@ -161,9 +125,16 @@ export class FollowersService {
       throw new NotFoundException("Not following this college");
     }
 
-    await this.eventBus.publish(
-      new CollegeFollowRemovedEvent(followerId, collegeId)
-    );
+    this.kafkaClient.emit("follows.college.removed", {
+      eventId: randomUUID(),
+      eventType: "follows.college.removed",
+      aggregateId: `${followerId}-college-${collegeId}`,
+      occurredAt: new Date().toISOString(),
+      payload: {
+        followerId,
+        collegeId,
+      },
+    });
   }
 
   async getFollowers(

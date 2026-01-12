@@ -42,6 +42,8 @@ export class CommentRepository {
     limit: number
   ): Promise<Comment[]> {
     const skip = (page - 1) * limit;
+    // Only return root-level comments (no parent)
+    // Replies are loaded separately via getReplies
     return this.repo.find({
       where: { postId, parentId: IsNull(), isDeleted: false },
       relations: ["author"],
@@ -77,5 +79,28 @@ export class CommentRepository {
 
   async decrementLikeCount(id: string): Promise<void> {
     await this.repo.decrement({ id }, "likeCount", 1);
+  }
+
+  async getReplyCount(parentId: string): Promise<number> {
+    return this.repo.count({ where: { parentId, isDeleted: false } });
+  }
+
+  async getReplyCountsForComments(
+    commentIds: string[]
+  ): Promise<Map<string, number>> {
+    if (commentIds.length === 0) return new Map();
+
+    const results = await this.repo
+      .createQueryBuilder("comment")
+      .select("comment.parentId", "parentId")
+      .addSelect("COUNT(*)", "count")
+      .where("comment.parentId IN (:...ids)", { ids: commentIds })
+      .andWhere("comment.isDeleted = false")
+      .groupBy("comment.parentId")
+      .getRawMany();
+
+    const countsMap = new Map<string, number>();
+    results.forEach((r) => countsMap.set(r.parentId, parseInt(r.count, 10)));
+    return countsMap;
   }
 }

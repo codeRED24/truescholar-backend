@@ -2,6 +2,7 @@ import { CollegeSearchModule } from "./college/college-search/college-search.mod
 import { CompareModule } from "./college/compare/compare.module";
 import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import { ThrottlerModule } from "@nestjs/throttler";
 import { LoggerModule, LoggerMiddleware } from "./common/logger";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
@@ -70,10 +71,19 @@ import { CollegeOnboardingModule } from "./college-onboarding/college-onboarding
 import { EventsModule } from "./events/events.module";
 import { SearchIndexModule } from "./helper_entities/search-index/search-index.module";
 import { FeedModule } from "./feed/feed.module";
+import { KafkaModule } from "./shared/kafka/kafka.module";
 
 @Module({
   imports: [
+    KafkaModule,
     LoggerModule,
+    ThrottlerModule.forRoot([
+      {
+        name: "like",
+        ttl: 60000, // 1 minute
+        limit: 30, // 30 like actions per minute
+      },
+    ]),
     BetterAuthModule,
     CollegeSearchModule,
     CompareModule,

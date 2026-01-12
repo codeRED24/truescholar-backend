@@ -3,9 +3,12 @@ import {
   NotFoundException,
   ForbiddenException,
   Inject,
+  OnModuleInit,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, MoreThanOrEqual, LessThanOrEqual, And } from "typeorm";
+import { ClientKafka } from "@nestjs/microservices";
+import { KAFKA_SERVICE } from "@/shared/kafka/kafka.module";
 import { Event } from "./event.entity";
 import { EventRsvp } from "./event-rsvp.entity";
 import {
@@ -16,67 +19,21 @@ import {
   EventQueryDto,
 } from "./event.dto";
 import { RSVPStatus } from "@/common/enums";
-import { IEventBus, EVENT_BUS } from "@/shared/events";
-import { DomainEvent } from "@/shared/events/domain-event";
-
-// Domain Events for Calendar Events
-export class CalendarEventCreatedEvent extends DomainEvent {
-  readonly eventType = "event.created";
-  constructor(
-    public readonly eventId: string,
-    public readonly title: string,
-    public readonly description?: string,
-    public readonly location?: string
-  ) {
-    super(eventId);
-  }
-  protected getPayload() {
-    return {
-      title: this.title,
-      description: this.description,
-      location: this.location,
-    };
-  }
-}
-
-export class CalendarEventUpdatedEvent extends DomainEvent {
-  readonly eventType = "event.updated";
-  constructor(
-    public readonly eventId: string,
-    public readonly title: string,
-    public readonly description?: string,
-    public readonly location?: string
-  ) {
-    super(eventId);
-  }
-  protected getPayload() {
-    return {
-      title: this.title,
-      description: this.description,
-      location: this.location,
-    };
-  }
-}
-
-export class CalendarEventDeletedEvent extends DomainEvent {
-  readonly eventType = "event.deleted";
-  constructor(public readonly eventId: string) {
-    super(eventId);
-  }
-  protected getPayload() {
-    return { eventId: this.eventId };
-  }
-}
+import { randomUUID } from "crypto";
 
 @Injectable()
-export class EventsService {
+export class EventsService implements OnModuleInit {
   constructor(
     @InjectRepository(Event)
     private readonly eventRepository: Repository<Event>,
     @InjectRepository(EventRsvp)
     private readonly rsvpRepository: Repository<EventRsvp>,
-    @Inject(EVENT_BUS) private readonly eventBus: IEventBus
+    @Inject(KAFKA_SERVICE) private readonly kafkaClient: ClientKafka
   ) {}
+
+  async onModuleInit() {
+    await this.kafkaClient.connect();
+  }
 
   async createEvent(dto: CreateEventDto): Promise<Event> {
     const event = this.eventRepository.create({
@@ -87,14 +44,17 @@ export class EventsService {
     const savedEvent = await this.eventRepository.save(event);
 
     // Emit event for search indexing
-    await this.eventBus.publish(
-      new CalendarEventCreatedEvent(
-        savedEvent.id,
-        savedEvent.title,
-        savedEvent.description,
-        savedEvent.location
-      )
-    );
+    this.kafkaClient.emit("event.created", {
+      eventId: randomUUID(),
+      eventType: "event.created",
+      aggregateId: savedEvent.id,
+      occurredAt: new Date().toISOString(),
+      payload: {
+        title: savedEvent.title,
+        description: savedEvent.description,
+        location: savedEvent.location,
+      },
+    });
 
     return savedEvent;
   }
@@ -186,14 +146,17 @@ export class EventsService {
     const updatedEvent = await this.getEventById(id);
 
     // Emit event for search indexing
-    await this.eventBus.publish(
-      new CalendarEventUpdatedEvent(
-        id,
-        updatedEvent.title,
-        updatedEvent.description,
-        updatedEvent.location
-      )
-    );
+    this.kafkaClient.emit("event.updated", {
+      eventId: randomUUID(),
+      eventType: "event.updated",
+      aggregateId: id,
+      occurredAt: new Date().toISOString(),
+      payload: {
+        title: updatedEvent.title,
+        description: updatedEvent.description,
+        location: updatedEvent.location,
+      },
+    });
 
     return updatedEvent;
   }
@@ -208,7 +171,13 @@ export class EventsService {
     await this.eventRepository.update(id, { isDeleted: true });
 
     // Emit event for search indexing
-    await this.eventBus.publish(new CalendarEventDeletedEvent(id));
+    this.kafkaClient.emit("event.deleted", {
+      eventId: randomUUID(),
+      eventType: "event.deleted",
+      aggregateId: id,
+      occurredAt: new Date().toISOString(),
+      payload: { eventId: id },
+    });
   }
 
   // RSVP Methods

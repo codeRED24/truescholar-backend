@@ -3,56 +3,26 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  OnModuleInit,
 } from "@nestjs/common";
-import { IEventBus, EVENT_BUS } from "../shared/events";
+import { ClientKafka } from "@nestjs/microservices";
+import { KAFKA_SERVICE } from "../shared/kafka/kafka.module";
 import { Comment } from "./comment.entity";
 import { CommentRepository } from "./comment.repository";
 import { PostsService } from "../posts/post.service";
-import { DomainEvent } from "../shared/events/domain-event";
-
-// Events
-export class CommentAddedEvent extends DomainEvent {
-  readonly eventType = "comments.added";
-  constructor(
-    public readonly commentId: string,
-    public readonly postId: string,
-    public readonly authorId: string,
-    public readonly postAuthorId: string,
-    public readonly parentCommentId: string | null
-  ) {
-    super(commentId);
-  }
-  protected getPayload() {
-    return {
-      commentId: this.commentId,
-      postId: this.postId,
-      authorId: this.authorId,
-      postAuthorId: this.postAuthorId,
-      parentCommentId: this.parentCommentId,
-    };
-  }
-}
-
-export class CommentDeletedEvent extends DomainEvent {
-  readonly eventType = "comments.deleted";
-  constructor(
-    public readonly commentId: string,
-    public readonly postId: string
-  ) {
-    super(commentId);
-  }
-  protected getPayload() {
-    return { commentId: this.commentId, postId: this.postId };
-  }
-}
+import { randomUUID } from "crypto";
 
 @Injectable()
-export class CommentsService {
+export class CommentsService implements OnModuleInit {
   constructor(
     private readonly commentRepository: CommentRepository,
     private readonly postsService: PostsService,
-    @Inject(EVENT_BUS) private readonly eventBus: IEventBus
+    @Inject(KAFKA_SERVICE) private readonly kafkaClient: ClientKafka
   ) {}
+
+  async onModuleInit() {
+    await this.kafkaClient.connect();
+  }
 
   async addComment(
     postId: string,
@@ -76,15 +46,21 @@ export class CommentsService {
       parentId,
     });
     await this.postsService.incrementCommentCount(postId);
-    await this.eventBus.publish(
-      new CommentAddedEvent(
-        comment.id,
+
+    this.kafkaClient.emit("comments.added", {
+      eventId: randomUUID(),
+      eventType: "comments.added",
+      aggregateId: comment.id,
+      occurredAt: new Date().toISOString(),
+      payload: {
+        commentId: comment.id,
         postId,
         authorId,
-        post.authorId,
-        parentId || null
-      )
-    );
+        postAuthorId: post.authorId,
+        parentCommentId: parentId || null,
+      },
+    });
+
     return comment;
   }
 
@@ -112,9 +88,14 @@ export class CommentsService {
 
     await this.commentRepository.softDelete(commentId);
     await this.postsService.decrementCommentCount(comment.postId);
-    await this.eventBus.publish(
-      new CommentDeletedEvent(commentId, comment.postId)
-    );
+
+    this.kafkaClient.emit("comments.deleted", {
+      eventId: randomUUID(),
+      eventType: "comments.deleted",
+      aggregateId: commentId,
+      occurredAt: new Date().toISOString(),
+      payload: { commentId, postId: comment.postId },
+    });
   }
 
   async findById(commentId: string): Promise<Comment | null> {

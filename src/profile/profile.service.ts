@@ -1,6 +1,8 @@
-import { Injectable, Inject } from "@nestjs/common";
+import { Injectable, Inject, OnModuleInit } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
+import { ClientKafka } from "@nestjs/microservices";
+import { KAFKA_SERVICE } from "@/shared/kafka/kafka.module";
 import {
   UserProfile,
   ExperienceEntry,
@@ -9,36 +11,21 @@ import {
 import { User } from "../authentication_module/better-auth/entities/users.entity";
 import { UpdateProfileDto } from "./profile.dto";
 import { v4 as uuidv4 } from "uuid";
-import { IEventBus, EVENT_BUS } from "@/shared/events";
-import { DomainEvent } from "@/shared/events/domain-event";
-
-// Domain Events for User
-export class UserUpdatedEvent extends DomainEvent {
-  readonly eventType = "user.updated";
-  constructor(
-    public readonly userId: string,
-    public readonly name: string,
-    public readonly bio?: string
-  ) {
-    super(userId);
-  }
-  protected getPayload() {
-    return {
-      name: this.name,
-      bio: this.bio,
-    };
-  }
-}
+import { randomUUID } from "crypto";
 
 @Injectable()
-export class ProfileService {
+export class ProfileService implements OnModuleInit {
   constructor(
     @InjectRepository(UserProfile)
     private readonly profileRepository: Repository<UserProfile>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    @Inject(EVENT_BUS) private readonly eventBus: IEventBus
+    @Inject(KAFKA_SERVICE) private readonly kafkaClient: ClientKafka
   ) {}
+
+  async onModuleInit() {
+    await this.kafkaClient.connect();
+  }
 
   /**
    * Get or create a user profile by user_id
@@ -103,9 +90,16 @@ export class ProfileService {
     // Emit event for search indexing
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (user) {
-      await this.eventBus.publish(
-        new UserUpdatedEvent(userId, user.name || "", savedProfile.bio)
-      );
+      this.kafkaClient.emit("user.updated", {
+        eventId: randomUUID(),
+        eventType: "user.updated",
+        aggregateId: userId,
+        occurredAt: new Date().toISOString(),
+        payload: {
+          name: user.name || "",
+          bio: savedProfile.bio,
+        },
+      });
     }
 
     return savedProfile;

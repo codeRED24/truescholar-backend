@@ -4,73 +4,29 @@ import {
   NotFoundException,
   ConflictException,
   forwardRef,
+  OnModuleInit,
 } from "@nestjs/common";
-import { IEventBus, EVENT_BUS } from "../shared/events";
+import { ClientKafka } from "@nestjs/microservices";
+import { KAFKA_SERVICE } from "../shared/kafka/kafka.module";
 import { LikeRepository } from "./like.repository";
 import { PostsService } from "../posts/post.service";
 import { CommentsService } from "../comments/comments.service";
-import { DomainEvent } from "../shared/events/domain-event";
-
-// Events
-export class PostLikedEvent extends DomainEvent {
-  readonly eventType = "likes.post.liked";
-  constructor(
-    public readonly postId: string,
-    public readonly likerId: string,
-    public readonly authorId: string
-  ) {
-    super(postId);
-  }
-  protected getPayload() {
-    return {
-      postId: this.postId,
-      likerId: this.likerId,
-      authorId: this.authorId,
-    };
-  }
-}
-
-export class PostUnlikedEvent extends DomainEvent {
-  readonly eventType = "likes.post.unliked";
-  constructor(
-    public readonly postId: string,
-    public readonly userId: string
-  ) {
-    super(postId);
-  }
-  protected getPayload() {
-    return { postId: this.postId, userId: this.userId };
-  }
-}
-
-export class CommentLikedEvent extends DomainEvent {
-  readonly eventType = "likes.comment.liked";
-  constructor(
-    public readonly commentId: string,
-    public readonly likerId: string,
-    public readonly commentAuthorId: string
-  ) {
-    super(commentId);
-  }
-  protected getPayload() {
-    return {
-      commentId: this.commentId,
-      likerId: this.likerId,
-      commentAuthorId: this.commentAuthorId,
-    };
-  }
-}
+import { randomUUID } from "crypto";
 
 @Injectable()
-export class LikesService {
+export class LikesService implements OnModuleInit {
   constructor(
     private readonly likeRepository: LikeRepository,
     @Inject(forwardRef(() => PostsService))
     private readonly postsService: PostsService,
     @Inject(forwardRef(() => CommentsService))
     private readonly commentsService: CommentsService,
-    @Inject(EVENT_BUS) private readonly eventBus: IEventBus
+    @Inject(KAFKA_SERVICE) private readonly kafkaClient: ClientKafka
   ) {}
+
+  async onModuleInit() {
+    await this.kafkaClient.connect();
+  }
 
   async likePost(userId: string, postId: string): Promise<void> {
     const post = await this.postsService.findById(postId);
@@ -83,9 +39,17 @@ export class LikesService {
     await this.postsService.incrementLikeCount(postId);
 
     if (userId !== post.authorId) {
-      await this.eventBus.publish(
-        new PostLikedEvent(postId, userId, post.authorId)
-      );
+      this.kafkaClient.emit("likes.post.liked", {
+        eventId: randomUUID(),
+        eventType: "likes.post.liked",
+        aggregateId: postId,
+        occurredAt: new Date().toISOString(),
+        payload: {
+          postId,
+          likerId: userId,
+          authorId: post.authorId,
+        },
+      });
     }
   }
 
@@ -93,7 +57,14 @@ export class LikesService {
     const removed = await this.likeRepository.unlikePost(userId, postId);
     if (removed) {
       await this.postsService.decrementLikeCount(postId);
-      await this.eventBus.publish(new PostUnlikedEvent(postId, userId));
+
+      this.kafkaClient.emit("likes.post.unliked", {
+        eventId: randomUUID(),
+        eventType: "likes.post.unliked",
+        aggregateId: postId,
+        occurredAt: new Date().toISOString(),
+        payload: { postId, userId },
+      });
     }
   }
 
@@ -111,9 +82,17 @@ export class LikesService {
     await this.commentsService.incrementLikeCount(commentId);
 
     if (userId !== comment.authorId) {
-      await this.eventBus.publish(
-        new CommentLikedEvent(commentId, userId, comment.authorId)
-      );
+      this.kafkaClient.emit("likes.comment.liked", {
+        eventId: randomUUID(),
+        eventType: "likes.comment.liked",
+        aggregateId: commentId,
+        occurredAt: new Date().toISOString(),
+        payload: {
+          commentId,
+          likerId: userId,
+          commentAuthorId: comment.authorId,
+        },
+      });
     }
   }
 
@@ -137,5 +116,12 @@ export class LikesService {
     postIds: string[]
   ): Promise<Map<string, boolean>> {
     return this.likeRepository.getLikeStatusForPosts(userId, postIds);
+  }
+
+  async getLikeStatusForComments(
+    userId: string,
+    commentIds: string[]
+  ): Promise<Map<string, boolean>> {
+    return this.likeRepository.getLikeStatusForComments(userId, commentIds);
   }
 }

@@ -5,7 +5,7 @@ import { FeedModule } from "../feed.module";
 import { FeedService } from "../feed.service";
 import { FeedCacheService } from "../feed-cache.service";
 import { TrendingService } from "../trending.service";
-import { FeedFanoutService } from "../feed-fanout.service";
+
 import { PostsModule } from "../../posts/posts.module";
 import { ConnectionsModule } from "../../connections/connections.module";
 import { LikesModule } from "../../likes/likes.module";
@@ -33,7 +33,7 @@ describe("FeedService Integration Tests", () => {
   let feedService: FeedService;
   let feedCache: FeedCacheService;
   let trendingService: TrendingService;
-  let fanoutService: FeedFanoutService;
+
   let postRepository: Repository<Post>;
   let userRepository: Repository<User>;
   let connectionRepository: Repository<Connection>;
@@ -71,7 +71,6 @@ describe("FeedService Integration Tests", () => {
     feedService = module.get<FeedService>(FeedService);
     feedCache = module.get<FeedCacheService>(FeedCacheService);
     trendingService = module.get<TrendingService>(TrendingService);
-    fanoutService = module.get<FeedFanoutService>(FeedFanoutService);
     postRepository = module.get(getRepositoryToken(Post));
     userRepository = module.get(getRepositoryToken(User));
     connectionRepository = module.get(getRepositoryToken(Connection));
@@ -332,66 +331,6 @@ describe("FeedService Integration Tests", () => {
 
       console.log(`10 concurrent feed requests took ${duration}ms total`);
       expect(results.every((r) => r.posts.length > 0)).toBe(true);
-    });
-  });
-
-  describe("Fan-out Tests", () => {
-    it("should fan out new post to timelines", async () => {
-      const authorId = testUsers[0].id;
-
-      // Create a new post
-      const newPost = await postRepository.save({
-        id: randomUUID(),
-        authorId,
-        content: "New test post for fan-out",
-        media: [],
-        visibility: PostVisibility.PUBLIC,
-        likeCount: 0,
-        commentCount: 0,
-        isDeleted: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      // Simulate fan-out event
-      await fanoutService.handlePostCreated({
-        payload: {
-          postId: newPost.id,
-          authorId,
-          visibility: "public",
-          content: newPost.content,
-        },
-      });
-
-      // Check if post appears in a connection's feed
-      const connections = await connectionRepository.find({
-        where: [
-          { requesterId: authorId, status: ConnectionStatus.ACCEPTED },
-          { addresseeId: authorId, status: ConnectionStatus.ACCEPTED },
-        ],
-        take: 1,
-      });
-
-      if (connections.length > 0) {
-        const connectionUserId =
-          connections[0].requesterId === authorId
-            ? connections[0].addresseeId
-            : connections[0].requesterId;
-
-        // Get timeline from cache
-        const timeline = await feedCache.getTimeline(
-          connectionUserId,
-          undefined,
-          20
-        );
-
-        if (timeline) {
-          const hasNewPost = timeline.postIds.includes(newPost.id);
-          console.log(
-            `Fan-out test: New post ${hasNewPost ? "found" : "not found"} in connection's timeline`
-          );
-        }
-      }
     });
   });
 });

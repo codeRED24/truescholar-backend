@@ -6,6 +6,7 @@ import {
   FastifyAdapter,
   NestFastifyApplication,
 } from "@nestjs/platform-fastify";
+import { MicroserviceOptions, Transport } from "@nestjs/microservices";
 import { AppModule } from "./app.module";
 import { AppLogger } from "./common/logger";
 dotenv.config();
@@ -24,6 +25,20 @@ async function bootstrap() {
 
   const httpAdapterHost = app.get(HttpAdapterHost);
   app.useGlobalFilters(new AllExceptionsFilter(httpAdapterHost));
+
+  // Connect Kafka microservice for event consumption
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.KAFKA,
+    options: {
+      client: {
+        clientId: process.env.KAFKA_CLIENT_ID || "truescholar-backend",
+        brokers: (process.env.KAFKA_BROKERS || "localhost:19092").split(","),
+      },
+      consumer: {
+        groupId: process.env.KAFKA_CONSUMER_GROUP || "truescholar-events",
+      },
+    },
+  });
 
   const config = new DocumentBuilder()
     .setTitle("My NestJS API")
@@ -81,8 +96,10 @@ async function bootstrap() {
   });
 
   const port = process.env.PORT || 8001;
+  await app.startAllMicroservices();
   await app.listen(port, "0.0.0.0");
   logger.log(`Application is running on: ${await app.getUrl()}`);
+  logger.log("Kafka microservice connected");
 }
 
 bootstrap();

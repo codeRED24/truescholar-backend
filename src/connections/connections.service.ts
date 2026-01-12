@@ -4,91 +4,24 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  OnModuleInit,
 } from "@nestjs/common";
-import { IEventBus, EVENT_BUS } from "../shared/events";
+import { ClientKafka } from "@nestjs/microservices";
+import { KAFKA_SERVICE } from "../shared/kafka/kafka.module";
 import { Connection, ConnectionStatus } from "./connection.entity";
 import { ConnectionRepository } from "./connection.repository";
-import { DomainEvent } from "../shared/events/domain-event";
-
-// Events
-export class ConnectionRequestedEvent extends DomainEvent {
-  readonly eventType = "connections.requested";
-  constructor(
-    public readonly connectionId: string,
-    public readonly requesterId: string,
-    public readonly addresseeId: string
-  ) {
-    super(connectionId);
-  }
-  protected getPayload() {
-    return {
-      connectionId: this.connectionId,
-      requesterId: this.requesterId,
-      addresseeId: this.addresseeId,
-    };
-  }
-}
-
-export class ConnectionAcceptedEvent extends DomainEvent {
-  readonly eventType = "connections.accepted";
-  constructor(
-    public readonly connectionId: string,
-    public readonly requesterId: string,
-    public readonly addresseeId: string
-  ) {
-    super(connectionId);
-  }
-  protected getPayload() {
-    return {
-      connectionId: this.connectionId,
-      requesterId: this.requesterId,
-      addresseeId: this.addresseeId,
-    };
-  }
-}
-
-export class ConnectionRejectedEvent extends DomainEvent {
-  readonly eventType = "connections.rejected";
-  constructor(
-    public readonly connectionId: string,
-    public readonly requesterId: string,
-    public readonly addresseeId: string
-  ) {
-    super(connectionId);
-  }
-  protected getPayload() {
-    return {
-      connectionId: this.connectionId,
-      requesterId: this.requesterId,
-      addresseeId: this.addresseeId,
-    };
-  }
-}
-
-export class ConnectionRemovedEvent extends DomainEvent {
-  readonly eventType = "connections.removed";
-  constructor(
-    public readonly connectionId: string,
-    public readonly userId1: string,
-    public readonly userId2: string
-  ) {
-    super(connectionId);
-  }
-  protected getPayload() {
-    return {
-      connectionId: this.connectionId,
-      userId1: this.userId1,
-      userId2: this.userId2,
-    };
-  }
-}
+import { randomUUID } from "crypto";
 
 @Injectable()
-export class ConnectionsService {
+export class ConnectionsService implements OnModuleInit {
   constructor(
     private readonly connectionRepository: ConnectionRepository,
-    @Inject(EVENT_BUS) private readonly eventBus: IEventBus
+    @Inject(KAFKA_SERVICE) private readonly kafkaClient: ClientKafka
   ) {}
+
+  async onModuleInit() {
+    await this.kafkaClient.connect();
+  }
 
   async sendRequest(
     requesterId: string,
@@ -113,9 +46,19 @@ export class ConnectionsService {
       requesterId,
       addresseeId
     );
-    await this.eventBus.publish(
-      new ConnectionRequestedEvent(connection.id, requesterId, addresseeId)
-    );
+
+    this.kafkaClient.emit("connections.requested", {
+      eventId: randomUUID(),
+      eventType: "connections.requested",
+      aggregateId: connection.id,
+      occurredAt: new Date().toISOString(),
+      payload: {
+        connectionId: connection.id,
+        requesterId,
+        addresseeId,
+      },
+    });
+
     return connection;
   }
 
@@ -135,13 +78,19 @@ export class ConnectionsService {
       connectionId,
       ConnectionStatus.ACCEPTED
     );
-    await this.eventBus.publish(
-      new ConnectionAcceptedEvent(
+
+    this.kafkaClient.emit("connections.accepted", {
+      eventId: randomUUID(),
+      eventType: "connections.accepted",
+      aggregateId: connectionId,
+      occurredAt: new Date().toISOString(),
+      payload: {
         connectionId,
-        connection.requesterId,
-        connection.addresseeId
-      )
-    );
+        requesterId: connection.requesterId,
+        addresseeId: connection.addresseeId,
+      },
+    });
+
     return updated!;
   }
 
@@ -158,13 +107,18 @@ export class ConnectionsService {
       connectionId,
       ConnectionStatus.REJECTED
     );
-    await this.eventBus.publish(
-      new ConnectionRejectedEvent(
+
+    this.kafkaClient.emit("connections.rejected", {
+      eventId: randomUUID(),
+      eventType: "connections.rejected",
+      aggregateId: connectionId,
+      occurredAt: new Date().toISOString(),
+      payload: {
         connectionId,
-        connection.requesterId,
-        connection.addresseeId
-      )
-    );
+        requesterId: connection.requesterId,
+        addresseeId: connection.addresseeId,
+      },
+    });
   }
 
   async cancelRequest(connectionId: string, userId: string): Promise<void> {
@@ -187,13 +141,18 @@ export class ConnectionsService {
       throw new BadRequestException("Connection is not active");
 
     await this.connectionRepository.delete(connectionId);
-    await this.eventBus.publish(
-      new ConnectionRemovedEvent(
+
+    this.kafkaClient.emit("connections.removed", {
+      eventId: randomUUID(),
+      eventType: "connections.removed",
+      aggregateId: connectionId,
+      occurredAt: new Date().toISOString(),
+      payload: {
         connectionId,
-        connection.requesterId,
-        connection.addresseeId
-      )
-    );
+        userId1: connection.requesterId,
+        userId2: connection.addresseeId,
+      },
+    });
   }
 
   async getConnections(userId: string, page: number, limit: number) {

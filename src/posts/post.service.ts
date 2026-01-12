@@ -3,67 +3,29 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  OnModuleInit,
+  forwardRef,
 } from "@nestjs/common";
-import { IEventBus, EVENT_BUS } from "../shared/events";
+import { ClientKafka } from "@nestjs/microservices";
+import { KAFKA_SERVICE } from "../shared/kafka/kafka.module";
 import { Post, PostVisibility, PostMedia } from "./post.entity";
 import { PostRepository } from "./post.repository";
+import { FeedCacheService } from "../feed/feed-cache.service";
 import { AuthorType, PostType } from "@/common/enums";
-
-// Events
-import { DomainEvent } from "../shared/events/domain-event";
-
-export class PostCreatedEvent extends DomainEvent {
-  readonly eventType = "post.created";
-  constructor(
-    public readonly postId: string,
-    public readonly authorId: string,
-    public readonly visibility: string,
-    public readonly content: string
-  ) {
-    super(postId);
-  }
-  protected getPayload() {
-    return {
-      postId: this.postId,
-      authorId: this.authorId,
-      visibility: this.visibility,
-      content: this.content,
-    };
-  }
-}
-
-export class PostUpdatedEvent extends DomainEvent {
-  readonly eventType = "post.updated";
-  constructor(
-    public readonly postId: string,
-    public readonly content: string
-  ) {
-    super(postId);
-  }
-  protected getPayload() {
-    return { postId: this.postId, content: this.content };
-  }
-}
-
-export class PostDeletedEvent extends DomainEvent {
-  readonly eventType = "post.deleted";
-  constructor(
-    public readonly postId: string,
-    public readonly authorId: string
-  ) {
-    super(postId);
-  }
-  protected getPayload() {
-    return { postId: this.postId, authorId: this.authorId };
-  }
-}
+import { randomUUID } from "crypto";
 
 @Injectable()
-export class PostsService {
+export class PostsService implements OnModuleInit {
   constructor(
     private readonly postRepository: PostRepository,
-    @Inject(EVENT_BUS) private readonly eventBus: IEventBus
+    @Inject(KAFKA_SERVICE) private readonly kafkaClient: ClientKafka,
+    @Inject(forwardRef(() => FeedCacheService))
+    private readonly feedCacheService: FeedCacheService
   ) {}
+
+  async onModuleInit() {
+    await this.kafkaClient.connect();
+  }
 
   async createPost(
     authorId: string,
@@ -83,9 +45,20 @@ export class PostsService {
       type,
       taggedCollegeId,
     });
-    await this.eventBus.publish(
-      new PostCreatedEvent(post.id, authorId, post.visibility, content)
-    );
+
+    this.kafkaClient.emit("post.created", {
+      eventId: randomUUID(),
+      eventType: "post.created",
+      aggregateId: post.id,
+      occurredAt: new Date().toISOString(),
+      payload: {
+        postId: post.id,
+        authorId,
+        visibility: post.visibility,
+        content,
+      },
+    });
+
     return post;
   }
 
@@ -151,7 +124,13 @@ export class PostsService {
 
     // Emit update event for search indexing
     const finalContent = content || post.content;
-    await this.eventBus.publish(new PostUpdatedEvent(postId, finalContent));
+    this.kafkaClient.emit("post.updated", {
+      eventId: randomUUID(),
+      eventType: "post.updated",
+      aggregateId: postId,
+      occurredAt: new Date().toISOString(),
+      payload: { postId, content: finalContent },
+    });
 
     return updatedPost;
   }
@@ -162,25 +141,36 @@ export class PostsService {
     if (post.authorId !== userId)
       throw new ForbiddenException("You can only delete your own posts");
     await this.postRepository.softDelete(postId);
-    await this.eventBus.publish(new PostDeletedEvent(postId, userId));
+
+    this.kafkaClient.emit("post.deleted", {
+      eventId: randomUUID(),
+      eventType: "post.deleted",
+      aggregateId: postId,
+      occurredAt: new Date().toISOString(),
+      payload: { postId, authorId: userId },
+    });
   }
 
   // Called by likes module
   async incrementLikeCount(postId: string): Promise<void> {
     await this.postRepository.incrementLikeCount(postId);
+    await this.feedCacheService.invalidatePost(postId);
   }
 
   async decrementLikeCount(postId: string): Promise<void> {
     await this.postRepository.decrementLikeCount(postId);
+    await this.feedCacheService.invalidatePost(postId);
   }
 
   // Called by comments module
   async incrementCommentCount(postId: string): Promise<void> {
     await this.postRepository.incrementCommentCount(postId);
+    await this.feedCacheService.invalidatePost(postId);
   }
 
   async decrementCommentCount(postId: string): Promise<void> {
     await this.postRepository.decrementCommentCount(postId);
+    await this.feedCacheService.invalidatePost(postId);
   }
 
   async findById(postId: string): Promise<Post | null> {
