@@ -4,13 +4,11 @@ import {
   NotFoundException,
   ForbiddenException,
   OnModuleInit,
-  forwardRef,
 } from "@nestjs/common";
 import { ClientKafka } from "@nestjs/microservices";
 import { KAFKA_SERVICE } from "../shared/kafka/kafka.module";
 import { Post, PostVisibility, PostMedia } from "./post.entity";
 import { PostRepository } from "./post.repository";
-import { FeedCacheService } from "../feed/feed-cache.service";
 import { AuthorType, PostType } from "@/common/enums";
 import { randomUUID } from "crypto";
 
@@ -18,9 +16,7 @@ import { randomUUID } from "crypto";
 export class PostsService implements OnModuleInit {
   constructor(
     private readonly postRepository: PostRepository,
-    @Inject(KAFKA_SERVICE) private readonly kafkaClient: ClientKafka,
-    @Inject(forwardRef(() => FeedCacheService))
-    private readonly feedCacheService: FeedCacheService
+    @Inject(KAFKA_SERVICE) private readonly kafkaClient: ClientKafka
   ) {}
 
   async onModuleInit() {
@@ -46,9 +42,9 @@ export class PostsService implements OnModuleInit {
       taggedCollegeId,
     });
 
-    this.kafkaClient.emit("post.created", {
+    this.kafkaClient.emit("posts.post.created", {
       eventId: randomUUID(),
-      eventType: "post.created",
+      eventType: "posts.post.created",
       aggregateId: post.id,
       occurredAt: new Date().toISOString(),
       payload: {
@@ -56,6 +52,8 @@ export class PostsService implements OnModuleInit {
         authorId,
         visibility: post.visibility,
         content,
+        mediaCount: media?.length || 0,
+        taggedCollegeId,
       },
     });
 
@@ -122,14 +120,26 @@ export class PostsService implements OnModuleInit {
       taggedCollegeId,
     })) as Post;
 
-    // Emit update event for search indexing
-    const finalContent = content || post.content;
-    this.kafkaClient.emit("post.updated", {
+    // Emit update event for cache invalidation and search indexing
+    const changedFields: string[] = [];
+    if (content !== undefined) changedFields.push("content");
+    if (media !== undefined) changedFields.push("media");
+    if (visibility !== undefined) changedFields.push("visibility");
+    if (type !== undefined) changedFields.push("type");
+    if (taggedCollegeId !== undefined) changedFields.push("taggedCollegeId");
+
+    this.kafkaClient.emit("posts.post.updated", {
       eventId: randomUUID(),
-      eventType: "post.updated",
+      eventType: "posts.post.updated",
       aggregateId: postId,
       occurredAt: new Date().toISOString(),
-      payload: { postId, content: finalContent },
+      payload: {
+        postId,
+        authorId: userId,
+        content,
+        visibility,
+        changedFields,
+      },
     });
 
     return updatedPost;
@@ -142,35 +152,39 @@ export class PostsService implements OnModuleInit {
       throw new ForbiddenException("You can only delete your own posts");
     await this.postRepository.softDelete(postId);
 
-    this.kafkaClient.emit("post.deleted", {
+    this.kafkaClient.emit("posts.post.deleted", {
       eventId: randomUUID(),
-      eventType: "post.deleted",
+      eventType: "posts.post.deleted",
       aggregateId: postId,
       occurredAt: new Date().toISOString(),
       payload: { postId, authorId: userId },
     });
   }
 
-  // Called by likes module
-  async incrementLikeCount(postId: string): Promise<void> {
+  // Called by likes module - cache update now happens via event
+  async incrementLikeCount(postId: string): Promise<number> {
     await this.postRepository.incrementLikeCount(postId);
-    await this.feedCacheService.invalidatePost(postId);
+    const post = await this.postRepository.findById(postId);
+    return post?.likeCount ?? 0;
   }
 
-  async decrementLikeCount(postId: string): Promise<void> {
+  async decrementLikeCount(postId: string): Promise<number> {
     await this.postRepository.decrementLikeCount(postId);
-    await this.feedCacheService.invalidatePost(postId);
+    const post = await this.postRepository.findById(postId);
+    return post?.likeCount ?? 0;
   }
 
-  // Called by comments module
-  async incrementCommentCount(postId: string): Promise<void> {
+  // Called by comments module - cache update now happens via event
+  async incrementCommentCount(postId: string): Promise<number> {
     await this.postRepository.incrementCommentCount(postId);
-    await this.feedCacheService.invalidatePost(postId);
+    const post = await this.postRepository.findById(postId);
+    return post?.commentCount ?? 0;
   }
 
-  async decrementCommentCount(postId: string): Promise<void> {
+  async decrementCommentCount(postId: string): Promise<number> {
     await this.postRepository.decrementCommentCount(postId);
-    await this.feedCacheService.invalidatePost(postId);
+    const post = await this.postRepository.findById(postId);
+    return post?.commentCount ?? 0;
   }
 
   async findById(postId: string): Promise<Post | null> {

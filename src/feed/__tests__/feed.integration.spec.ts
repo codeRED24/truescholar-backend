@@ -7,15 +7,12 @@ import { FeedCacheService } from "../feed-cache.service";
 import { TrendingService } from "../trending.service";
 
 import { PostsModule } from "../../posts/posts.module";
-import { ConnectionsModule } from "../../connections/connections.module";
+import { FollowersModule } from "../../followers/followers.module";
 import { LikesModule } from "../../likes/likes.module";
 import { CommentsModule } from "../../comments/comments.module";
 import { SharedModule } from "../../shared/shared.module";
 import { Post, PostVisibility } from "../../posts/post.entity";
-import {
-  Connection,
-  ConnectionStatus,
-} from "../../connections/connection.entity";
+import { Follow } from "../../followers/follow.entity";
 import { Like } from "../../likes/like.entity";
 import { Comment } from "../../comments/comment.entity";
 import { User } from "../../authentication_module/better-auth/entities/users.entity";
@@ -36,7 +33,7 @@ describe("FeedService Integration Tests", () => {
 
   let postRepository: Repository<Post>;
   let userRepository: Repository<User>;
-  let connectionRepository: Repository<Connection>;
+  let followRepository: Repository<Follow>;
   let likeRepository: Repository<Like>;
   let dataSource: DataSource;
 
@@ -55,13 +52,13 @@ describe("FeedService Integration Tests", () => {
           username: process.env.DB_USERNAME || "postgres",
           password: process.env.DB_PASSWORD || "postgres",
           database: process.env.DB_NAME || "truescholar_test",
-          entities: [Post, User, Connection, Like, Comment],
+          entities: [Post, User, Follow, Like, Comment],
           synchronize: true, // Only for testing
           dropSchema: true, // Fresh DB for each test run
         }),
         FeedModule,
         PostsModule,
-        ConnectionsModule,
+        FollowersModule,
         LikesModule,
         CommentsModule,
         SharedModule,
@@ -73,7 +70,7 @@ describe("FeedService Integration Tests", () => {
     trendingService = module.get<TrendingService>(TrendingService);
     postRepository = module.get(getRepositoryToken(Post));
     userRepository = module.get(getRepositoryToken(User));
-    connectionRepository = module.get(getRepositoryToken(Connection));
+    followRepository = module.get(getRepositoryToken(Follow));
     likeRepository = module.get(getRepositoryToken(Like));
     dataSource = module.get(DataSource);
   });
@@ -82,7 +79,7 @@ describe("FeedService Integration Tests", () => {
     await module.close();
   });
 
-  describe("Setup: Create Test Users and Connections", () => {
+  describe("Setup: Create Test Users and Follows", () => {
     it("should create 50 test users", async () => {
       for (let i = 0; i < 50; i++) {
         const user = userRepository.create({
@@ -99,36 +96,34 @@ describe("FeedService Integration Tests", () => {
       expect(testUsers.length).toBe(50);
     });
 
-    it("should create connections between users (network simulation)", async () => {
-      // Create a semi-random connection graph
-      // Each user connects to ~10 other users
-      const connections: Partial<Connection>[] = [];
+    it("should create follow relationships between users (network simulation)", async () => {
+      // Create a semi-random follow graph
+      // Each user follows ~10 other users
+      const follows: Partial<Follow>[] = [];
 
       for (let i = 0; i < testUsers.length; i++) {
-        const numConnections = 5 + Math.floor(Math.random() * 10); // 5-15 connections
-        const connectedTo = new Set<number>();
+        const numFollows = 5 + Math.floor(Math.random() * 10); // 5-15 follows
+        const followedUsers = new Set<number>();
 
-        for (let j = 0; j < numConnections; j++) {
+        for (let j = 0; j < numFollows; j++) {
           let targetIdx = Math.floor(Math.random() * testUsers.length);
-          while (targetIdx === i || connectedTo.has(targetIdx)) {
+          while (targetIdx === i || followedUsers.has(targetIdx)) {
             targetIdx = (targetIdx + 1) % testUsers.length;
           }
-          connectedTo.add(targetIdx);
+          followedUsers.add(targetIdx);
 
-          connections.push({
+          follows.push({
             id: randomUUID(),
-            requesterId: testUsers[i].id,
-            addresseeId: testUsers[targetIdx].id,
-            status: ConnectionStatus.ACCEPTED,
+            followerId: testUsers[i].id,
+            followingId: testUsers[targetIdx].id,
             createdAt: new Date(),
-            updatedAt: new Date(),
           });
         }
       }
 
-      await connectionRepository.save(connections);
-      const count = await connectionRepository.count();
-      console.log(`Created ${count} connections`);
+      await followRepository.save(follows);
+      const count = await followRepository.count();
+      console.log(`Created ${count} follow relationships`);
       expect(count).toBeGreaterThan(100);
     });
   });
@@ -244,63 +239,51 @@ describe("FeedService Integration Tests", () => {
       );
     });
 
-    it("should include posts from connections", async () => {
+    it("should include posts from followed users", async () => {
       const testUserId = testUsers[0].id;
 
-      // Get user's connections
-      const connections = await connectionRepository.find({
-        where: [
-          { requesterId: testUserId, status: ConnectionStatus.ACCEPTED },
-          { addresseeId: testUserId, status: ConnectionStatus.ACCEPTED },
-        ],
+      // Get user's following
+      const follows = await followRepository.find({
+        where: { followerId: testUserId },
       });
 
-      const connectionIds = connections.map((c) =>
-        c.requesterId === testUserId ? c.addresseeId : c.requesterId
-      );
+      const followingIds = follows.map((f) => f.followingId);
 
       const result = await feedService.getFeed(testUserId, undefined, 50);
 
-      // Check if at least some posts are from connections
-      const fromConnections = result.posts.filter(
-        (p) => connectionIds.includes(p.author.id) || p.author.id === testUserId
+      // Check if at least some posts are from followed users
+      const fromFollowing = result.posts.filter(
+        (p) => followingIds.includes(p.author.id) || p.author.id === testUserId
       );
 
       console.log(
-        `Feed has ${fromConnections.length}/${result.posts.length} posts from connections`
+        `Feed has ${fromFollowing.length}/${result.posts.length} posts from followed users`
       );
-      expect(fromConnections.length).toBeGreaterThan(0);
+      expect(fromFollowing.length).toBeGreaterThan(0);
     });
 
     it("should include trending/discovery posts", async () => {
       const testUserId = testUsers[0].id;
 
-      // Get connection IDs
-      const connections = await connectionRepository.find({
-        where: [
-          { requesterId: testUserId, status: ConnectionStatus.ACCEPTED },
-          { addresseeId: testUserId, status: ConnectionStatus.ACCEPTED },
-        ],
+      // Get following IDs
+      const follows = await followRepository.find({
+        where: { followerId: testUserId },
       });
 
-      const connectionIds = new Set(
-        connections.map((c) =>
-          c.requesterId === testUserId ? c.addresseeId : c.requesterId
-        )
-      );
-      connectionIds.add(testUserId);
+      const followingIds = new Set(follows.map((f) => f.followingId));
+      followingIds.add(testUserId);
 
       const result = await feedService.getFeed(testUserId, undefined, 50);
 
-      // Posts NOT from connections = discovery/trending
+      // Posts NOT from following = discovery/trending
       const discoveryPosts = result.posts.filter(
-        (p) => !connectionIds.has(p.author.id)
+        (p) => !followingIds.has(p.author.id)
       );
 
       console.log(
         `Feed has ${discoveryPosts.length}/${result.posts.length} discovery posts`
       );
-      // May be 0 if all posts happen to be from connections in this small test
+      // May be 0 if all posts happen to be from following in this small test
     });
   });
 

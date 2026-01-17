@@ -15,15 +15,15 @@ import { FeedController } from "./feed.controller";
 import { FeedEventController } from "./feed-event.controller";
 
 // Dependencies
-import { ConnectionsModule } from "../connections/connections.module";
 import { LikesModule } from "../likes/likes.module";
+import { FollowersModule } from "../followers/followers.module";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Post]),
     ScheduleModule.forRoot(),
-    ConnectionsModule,
     LikesModule,
+    FollowersModule,
   ],
   providers: [FeedService, FeedCacheService, TrendingService],
   controllers: [FeedController, FeedEventController],

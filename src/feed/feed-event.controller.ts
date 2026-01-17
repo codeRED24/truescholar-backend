@@ -1,26 +1,43 @@
 import { Controller } from "@nestjs/common";
 import { EventPattern, Payload } from "@nestjs/microservices";
 import { FeedCacheService, CELEBRITY_THRESHOLD } from "./feed-cache.service";
-import { ConnectionsService } from "../connections/connections.service";
+import { FollowersService } from "../followers/followers.service";
+import {
+  POST_EVENTS,
+  PostCreatedEvent,
+  PostUpdatedEvent,
+  PostDeletedEvent,
+  ENGAGEMENT_EVENTS,
+  PostLikedEvent,
+  PostUnlikedEvent,
+  SOCIAL_GRAPH_EVENTS,
+  UserFollowedEvent,
+  UserUnfollowedEvent,
+  COMMENT_EVENTS,
+  CommentCreatedEvent,
+  CommentDeletedEvent,
+} from "../shared/events";
 
 /**
  * Kafka Event Controller for handling feed fanout events.
- * Replaces the event subscription logic from feed-fanout.service.ts
+ * Uses follow-based model (Twitter-style)
+ *
+ * This controller is the ONLY place where feed cache is updated.
+ * Other modules emit events, this module handles cache side effects.
  */
 @Controller()
 export class FeedEventController {
   constructor(
     private readonly feedCache: FeedCacheService,
-    private readonly connectionsService: ConnectionsService
+    private readonly followersService: FollowersService
   ) {}
 
-  @EventPattern("post.created")
-  async handlePostCreated(
-    @Payload()
-    event: {
-      payload: { postId: string; authorId: string; visibility: string };
-    }
-  ) {
+  // ===========================================================================
+  // Post Events
+  // ===========================================================================
+
+  @EventPattern(POST_EVENTS.CREATED)
+  async handlePostCreated(@Payload() event: PostCreatedEvent) {
     const { postId, authorId, visibility } = event.payload;
 
     if (visibility === "private") {
@@ -31,18 +48,18 @@ export class FeedEventController {
     const timestamp = Date.now();
 
     try {
-      const connectionIds = await this.getConnectionIds(authorId);
-      const connectionCount = connectionIds.length;
+      const followerIds = await this.getFollowerIds(authorId);
+      const followerCount = followerIds.length;
 
-      if (connectionCount >= CELEBRITY_THRESHOLD) {
+      if (followerCount >= CELEBRITY_THRESHOLD) {
         await this.feedCache.addToCelebrityPosts(authorId, postId, timestamp);
         console.log(
           `[FeedFanout] Celebrity fan-out: added to outbox for ${authorId}`
         );
       } else {
-        await this.feedCache.addToTimelines(connectionIds, postId, timestamp);
+        await this.feedCache.addToTimelines(followerIds, postId, timestamp);
         console.log(
-          `[FeedFanout] Fan-out to ${connectionCount} connections for post ${postId}`
+          `[FeedFanout] Fan-out to ${followerCount} followers for post ${postId}`
         );
       }
 
@@ -52,15 +69,31 @@ export class FeedEventController {
     }
   }
 
-  @EventPattern("post.deleted")
-  async handlePostDeleted(
-    @Payload() event: { payload: { postId: string; authorId: string } }
-  ) {
+  @EventPattern(POST_EVENTS.UPDATED)
+  async handlePostUpdated(@Payload() event: PostUpdatedEvent) {
+    const { postId, changedFields } = event.payload;
+
+    try {
+      // Invalidate cached post data so next fetch gets fresh content
+      await this.feedCache.invalidatePost(postId);
+      console.log(
+        `[FeedFanout] Post ${postId} updated, fields: ${changedFields.join(", ")}`
+      );
+    } catch (error) {
+      console.error(
+        `[FeedFanout] Error invalidating updated post ${postId}:`,
+        error
+      );
+    }
+  }
+
+  @EventPattern(POST_EVENTS.DELETED)
+  async handlePostDeleted(@Payload() event: PostDeletedEvent) {
     const { postId, authorId } = event.payload;
 
     try {
-      const connectionIds = await this.getConnectionIds(authorId);
-      await this.feedCache.removeFromTimelines(connectionIds, postId);
+      const followerIds = await this.getFollowerIds(authorId);
+      await this.feedCache.removeFromTimelines(followerIds, postId);
       await this.feedCache.removeFromTimeline(authorId, postId);
       await this.feedCache.removeFromCelebrityPosts(authorId, postId);
       await this.feedCache.invalidatePost(postId);
@@ -73,43 +106,127 @@ export class FeedEventController {
     }
   }
 
-  @EventPattern("connections.accepted")
-  async handleConnectionAccepted(
-    @Payload() event: { payload: { requesterId: string; addresseeId: string } }
-  ) {
-    const { requesterId, addresseeId } = event.payload;
+  // ===========================================================================
+  // Engagement Events (Likes)
+  // ===========================================================================
+
+  @EventPattern(ENGAGEMENT_EVENTS.POST_LIKED)
+  async handlePostLiked(@Payload() event: PostLikedEvent) {
+    const { postId, likeCount } = event.payload;
 
     try {
-      await this.feedCache.invalidateConnectionIds(requesterId);
-      await this.feedCache.invalidateConnectionIds(addresseeId);
+      // Update cached post with new like count
+      await this.feedCache.updatePostLikeCount(postId, likeCount);
+      console.log(`[FeedFanout] Post ${postId} liked, count: ${likeCount}`);
+    } catch (error) {
+      console.error(
+        `[FeedFanout] Error updating like count for ${postId}:`,
+        error
+      );
+    }
+  }
+
+  @EventPattern(ENGAGEMENT_EVENTS.POST_UNLIKED)
+  async handlePostUnliked(@Payload() event: PostUnlikedEvent) {
+    const { postId, likeCount } = event.payload;
+
+    try {
+      await this.feedCache.updatePostLikeCount(postId, likeCount);
+      console.log(`[FeedFanout] Post ${postId} unliked, count: ${likeCount}`);
+    } catch (error) {
+      console.error(
+        `[FeedFanout] Error updating like count for ${postId}:`,
+        error
+      );
+    }
+  }
+
+  // ===========================================================================
+  // Comment Events
+  // ===========================================================================
+
+  @EventPattern(COMMENT_EVENTS.CREATED)
+  async handleCommentCreated(@Payload() event: CommentCreatedEvent) {
+    const { postId, postCommentCount } = event.payload;
+
+    try {
+      await this.feedCache.updatePostCommentCount(postId, postCommentCount);
       console.log(
-        `[FeedFanout] Connection accepted: ${requesterId} <-> ${addresseeId}`
+        `[FeedFanout] Comment added to post ${postId}, count: ${postCommentCount}`
       );
     } catch (error) {
-      console.error("[FeedFanout] Error handling connection accepted:", error);
+      console.error(
+        `[FeedFanout] Error updating comment count for ${postId}:`,
+        error
+      );
     }
   }
 
-  @EventPattern("connections.removed")
-  async handleConnectionRemoved(
-    @Payload() event: { payload: { userId1: string; userId2: string } }
-  ) {
-    const { userId1, userId2 } = event.payload;
+  @EventPattern(COMMENT_EVENTS.DELETED)
+  async handleCommentDeleted(@Payload() event: CommentDeletedEvent) {
+    const { postId, postCommentCount } = event.payload;
 
     try {
-      await this.feedCache.invalidateConnectionIds(userId1);
-      await this.feedCache.invalidateConnectionIds(userId2);
-      console.log(`[FeedFanout] Connection removed: ${userId1} <-> ${userId2}`);
+      await this.feedCache.updatePostCommentCount(postId, postCommentCount);
+      console.log(
+        `[FeedFanout] Comment deleted from post ${postId}, count: ${postCommentCount}`
+      );
     } catch (error) {
-      console.error("[FeedFanout] Error handling connection removed:", error);
+      console.error(
+        `[FeedFanout] Error updating comment count for ${postId}:`,
+        error
+      );
     }
   }
 
-  private async getConnectionIds(userId: string): Promise<string[]> {
+  // ===========================================================================
+  // Social Graph Events (Follows)
+  // ===========================================================================
+
+  @EventPattern(SOCIAL_GRAPH_EVENTS.USER_FOLLOWED)
+  async handleUserFollowed(@Payload() event: UserFollowedEvent) {
+    const { followerId, followingId } = event.payload;
+
+    try {
+      // Invalidate follower's connection cache so their feed gets rebuilt
+      await this.feedCache.invalidateConnectionIds(followerId);
+      console.log(
+        `[FeedFanout] Follow created: ${followerId} -> ${followingId}`
+      );
+    } catch (error) {
+      console.error("[FeedFanout] Error handling follow created:", error);
+    }
+  }
+
+  @EventPattern(SOCIAL_GRAPH_EVENTS.USER_UNFOLLOWED)
+  async handleUserUnfollowed(@Payload() event: UserUnfollowedEvent) {
+    const { followerId, followingId } = event.payload;
+
+    try {
+      await this.feedCache.invalidateConnectionIds(followerId);
+      console.log(
+        `[FeedFanout] Follow removed: ${followerId} -> ${followingId}`
+      );
+    } catch (error) {
+      console.error("[FeedFanout] Error handling follow removed:", error);
+    }
+  }
+
+  // ===========================================================================
+  // Helper Methods
+  // ===========================================================================
+
+  private async getFollowerIds(userId: string): Promise<string[]> {
     const cached = await this.feedCache.getConnectionIds(userId);
     if (cached) return cached;
 
-    const ids = await this.connectionsService.getConnectionUserIds(userId);
+    // Get followers (people who follow this user)
+    const followers = await this.followersService.getFollowers(
+      userId,
+      1,
+      10000
+    );
+    const ids = followers.map((f) => f.user.id);
     await this.feedCache.cacheConnectionIds(userId, ids);
     return ids;
   }

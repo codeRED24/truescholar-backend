@@ -36,34 +36,34 @@ export class LikesService implements OnModuleInit {
     if (hasLiked) throw new ConflictException("Already liked this post");
 
     await this.likeRepository.likePost(userId, postId);
-    await this.postsService.incrementLikeCount(postId);
+    const newLikeCount = await this.postsService.incrementLikeCount(postId);
 
-    if (userId !== post.authorId) {
-      this.kafkaClient.emit("likes.post.liked", {
-        eventId: randomUUID(),
-        eventType: "likes.post.liked",
-        aggregateId: postId,
-        occurredAt: new Date().toISOString(),
-        payload: {
-          postId,
-          likerId: userId,
-          authorId: post.authorId,
-        },
-      });
-    }
+    // Always emit event for cache update
+    this.kafkaClient.emit("engagement.post.liked", {
+      eventId: randomUUID(),
+      eventType: "engagement.post.liked",
+      aggregateId: postId,
+      occurredAt: new Date().toISOString(),
+      payload: {
+        postId,
+        likerId: userId,
+        authorId: post.authorId,
+        likeCount: newLikeCount,
+      },
+    });
   }
 
   async unlikePost(userId: string, postId: string): Promise<void> {
     const removed = await this.likeRepository.unlikePost(userId, postId);
     if (removed) {
-      await this.postsService.decrementLikeCount(postId);
+      const newLikeCount = await this.postsService.decrementLikeCount(postId);
 
-      this.kafkaClient.emit("likes.post.unliked", {
+      this.kafkaClient.emit("engagement.post.unliked", {
         eventId: randomUUID(),
-        eventType: "likes.post.unliked",
+        eventType: "engagement.post.unliked",
         aggregateId: postId,
         occurredAt: new Date().toISOString(),
-        payload: { postId, userId },
+        payload: { postId, userId, likeCount: newLikeCount },
       });
     }
   }
@@ -82,15 +82,17 @@ export class LikesService implements OnModuleInit {
     await this.commentsService.incrementLikeCount(commentId);
 
     if (userId !== comment.authorId) {
-      this.kafkaClient.emit("likes.comment.liked", {
+      this.kafkaClient.emit("engagement.comment.liked", {
         eventId: randomUUID(),
-        eventType: "likes.comment.liked",
+        eventType: "engagement.comment.liked",
         aggregateId: commentId,
         occurredAt: new Date().toISOString(),
         payload: {
           commentId,
+          postId: comment.postId,
           likerId: userId,
           commentAuthorId: comment.authorId,
+          likeCount: 0, // TODO: Get actual like count
         },
       });
     }

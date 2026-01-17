@@ -357,6 +357,43 @@ export class FeedCacheService {
     }
   }
 
+  /**
+   * Update like count in cached post (incremental update, no full invalidation)
+   */
+  async updatePostLikeCount(postId: string, likeCount: number): Promise<void> {
+    if (!this.redis) return;
+
+    try {
+      const key = `post:${postId}`;
+      const exists = await this.redis.exists(key);
+      if (exists) {
+        await this.redis.hset(key, "likeCount", String(likeCount));
+      }
+    } catch (error) {
+      console.error("[FeedCache] updatePostLikeCount error:", error);
+    }
+  }
+
+  /**
+   * Update comment count in cached post (incremental update, no full invalidation)
+   */
+  async updatePostCommentCount(
+    postId: string,
+    commentCount: number
+  ): Promise<void> {
+    if (!this.redis) return;
+
+    try {
+      const key = `post:${postId}`;
+      const exists = await this.redis.exists(key);
+      if (exists) {
+        await this.redis.hset(key, "commentCount", String(commentCount));
+      }
+    } catch (error) {
+      console.error("[FeedCache] updatePostCommentCount error:", error);
+    }
+  }
+
   // ============================================
   // Connection Cache Operations
   // ============================================

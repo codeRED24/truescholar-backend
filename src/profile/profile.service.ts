@@ -58,6 +58,15 @@ export class ProfileService implements OnModuleInit {
   }
 
   /**
+   * Get user by ID
+   */
+  async getUserById(userId: string): Promise<User | null> {
+    return this.userRepository.findOne({
+      where: { id: userId },
+    });
+  }
+
+  /**
    * Update user profile
    */
   async updateProfile(

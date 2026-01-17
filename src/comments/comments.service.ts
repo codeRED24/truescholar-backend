@@ -45,11 +45,12 @@ export class CommentsService implements OnModuleInit {
       content,
       parentId,
     });
-    await this.postsService.incrementCommentCount(postId);
+    const newCommentCount =
+      await this.postsService.incrementCommentCount(postId);
 
-    this.kafkaClient.emit("comments.added", {
+    this.kafkaClient.emit("content.comment.created", {
       eventId: randomUUID(),
-      eventType: "comments.added",
+      eventType: "content.comment.created",
       aggregateId: comment.id,
       occurredAt: new Date().toISOString(),
       payload: {
@@ -57,7 +58,8 @@ export class CommentsService implements OnModuleInit {
         postId,
         authorId,
         postAuthorId: post.authorId,
-        parentCommentId: parentId || null,
+        parentId: parentId || null,
+        postCommentCount: newCommentCount,
       },
     });
 
@@ -67,9 +69,10 @@ export class CommentsService implements OnModuleInit {
   async getPostComments(
     postId: string,
     page: number,
-    limit: number
+    limit: number,
+    cursor?: string
   ): Promise<Comment[]> {
-    return this.commentRepository.getPostComments(postId, page, limit);
+    return this.commentRepository.getPostComments(postId, page, limit, cursor);
   }
 
   async getReplies(
@@ -87,14 +90,21 @@ export class CommentsService implements OnModuleInit {
       throw new ForbiddenException("You can only delete your own comments");
 
     await this.commentRepository.softDelete(commentId);
-    await this.postsService.decrementCommentCount(comment.postId);
+    const newCommentCount = await this.postsService.decrementCommentCount(
+      comment.postId
+    );
 
-    this.kafkaClient.emit("comments.deleted", {
+    this.kafkaClient.emit("content.comment.deleted", {
       eventId: randomUUID(),
-      eventType: "comments.deleted",
+      eventType: "content.comment.deleted",
       aggregateId: commentId,
       occurredAt: new Date().toISOString(),
-      payload: { commentId, postId: comment.postId },
+      payload: {
+        commentId,
+        postId: comment.postId,
+        authorId: comment.authorId,
+        postCommentCount: newCommentCount,
+      },
     });
   }
 

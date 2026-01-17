@@ -15,7 +15,7 @@ import { AuthGuard } from "../authentication_module/better-auth/guards/auth.guar
 import { User } from "../authentication_module/better-auth/decorators/auth.decorators";
 import { PostsService } from "./post.service";
 import { CreatePostDto, UpdatePostDto, FeedQueryDto } from "./post.dto";
-import { ConnectionsService } from "src/connections/connections.service";
+import { FollowersService } from "src/followers/followers.service";
 import { LikesService } from "src/likes/likes.service";
 
 @ApiTags("Posts")
@@ -25,7 +25,7 @@ import { LikesService } from "src/likes/likes.service";
 export class PostsController {
   constructor(
     private readonly postsService: PostsService,
-    private readonly connectionsService: ConnectionsService,
+    private readonly followersService: FollowersService,
     private readonly likesService: LikesService
   ) {}
 
@@ -47,12 +47,11 @@ export class PostsController {
   @Get("feed")
   @ApiOperation({ summary: "Get personalized feed" })
   async getFeed(@User() user: { id: string }, @Query() query: FeedQueryDto) {
-    const connectionIds = await this.connectionsService.getConnectionUserIds(
-      user.id
-    );
+    // Get IDs of users this user follows
+    const followingIds = await this.followersService.getFollowingIds(user.id);
     const posts = await this.postsService.getFeed(
       user.id,
-      connectionIds,
+      followingIds,
       query.page || 1,
       Math.min(query.limit || 20, 50)
     );
@@ -69,8 +68,14 @@ export class PostsController {
   @Get(":id")
   @ApiOperation({ summary: "Get a specific post" })
   async getPost(@User() user: { id: string }, @Param("id") postId: string) {
-    const post = await this.postsService.getPost(postId, user.id, (a, b) =>
-      this.connectionsService.areConnected(a, b)
+    const post = await this.postsService.getPost(
+      postId,
+      user.id,
+      async (a, b) => {
+        // Check if user a follows user b
+        const following = await this.followersService.getFollowingIds(a);
+        return following.includes(b);
+      }
     );
     const hasLiked = await this.likesService.hasLikedPost(user.id, postId);
     return this.mapToResponse(post, hasLiked);

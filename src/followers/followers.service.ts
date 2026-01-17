@@ -12,6 +12,7 @@ import { Follow } from "./follow.entity";
 import { FollowCollege } from "./follow-college.entity";
 import { FollowRepository } from "./follow.repository";
 import { FollowCollegeRepository } from "./follow-college.repository";
+import { FollowCacheService } from "./follow-cache.service";
 import { randomUUID } from "crypto";
 import {
   FollowEntry,
@@ -25,6 +26,7 @@ export class FollowersService implements OnModuleInit {
   constructor(
     private readonly followRepository: FollowRepository,
     private readonly followCollegeRepository: FollowCollegeRepository,
+    private readonly followCacheService: FollowCacheService,
     @Inject(KAFKA_SERVICE) private readonly kafkaClient: ClientKafka
   ) {}
 
@@ -47,15 +49,19 @@ export class FollowersService implements OnModuleInit {
 
     const follow = await this.followRepository.create(followerId, followingId);
 
-    this.kafkaClient.emit("follows.created", {
+    // Write-through cache update
+    await this.followCacheService.addFollow(followerId, followingId);
+
+    this.kafkaClient.emit("social-graph.user.followed", {
       eventId: randomUUID(),
-      eventType: "follows.created",
+      eventType: "social-graph.user.followed",
       aggregateId: follow.id,
       occurredAt: new Date().toISOString(),
       payload: {
-        followId: follow.id,
         followerId,
         followingId,
+        followerFollowingCount: 0, // Will be set correctly in Phase 3
+        followingFollowerCount: 0,
       },
     });
 
@@ -72,14 +78,19 @@ export class FollowersService implements OnModuleInit {
       throw new NotFoundException("Not following this user");
     }
 
-    this.kafkaClient.emit("follows.removed", {
+    // Write-through cache update
+    await this.followCacheService.removeFollow(followerId, followingId);
+
+    this.kafkaClient.emit("social-graph.user.unfollowed", {
       eventId: randomUUID(),
-      eventType: "follows.removed",
+      eventType: "social-graph.user.unfollowed",
       aggregateId: `${followerId}-${followingId}`,
       occurredAt: new Date().toISOString(),
       payload: {
         followerId,
         followingId,
+        followerFollowingCount: 0,
+        followingFollowerCount: 0,
       },
     });
   }
@@ -101,14 +112,13 @@ export class FollowersService implements OnModuleInit {
       collegeId
     );
 
-    this.kafkaClient.emit("follows.college.created", {
+    this.kafkaClient.emit("social-graph.college.followed", {
       eventId: randomUUID(),
-      eventType: "follows.college.created",
+      eventType: "social-graph.college.followed",
       aggregateId: follow.id,
       occurredAt: new Date().toISOString(),
       payload: {
-        followId: follow.id,
-        followerId,
+        userId: followerId,
         collegeId,
       },
     });
@@ -125,13 +135,13 @@ export class FollowersService implements OnModuleInit {
       throw new NotFoundException("Not following this college");
     }
 
-    this.kafkaClient.emit("follows.college.removed", {
+    this.kafkaClient.emit("social-graph.college.unfollowed", {
       eventId: randomUUID(),
-      eventType: "follows.college.removed",
+      eventType: "social-graph.college.unfollowed",
       aggregateId: `${followerId}-college-${collegeId}`,
       occurredAt: new Date().toISOString(),
       payload: {
-        followerId,
+        userId: followerId,
         collegeId,
       },
     });

@@ -47,6 +47,41 @@ export class ProfileController {
   }
 
   /**
+   * Get public profile by user ID
+   * GET /profile/:userId
+   */
+  @Get(":userId")
+  async getPublicProfile(@Param("userId") userId: string) {
+    const profile = await this.profileService.getProfile(userId);
+    const user = await this.profileService.getUserById(userId);
+
+    if (!user) {
+      return { error: "User not found", statusCode: 404 };
+    }
+
+    return {
+      profile: profile || {
+        user_id: userId,
+        bio: null,
+        experience: [],
+        education: [],
+        skills: [],
+        linkedin_url: null,
+        twitter_url: null,
+        github_url: null,
+        website_url: null,
+      },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
+        createdAt: user.createdAt,
+      },
+    };
+  }
+
+  /**
    * Update current user's profile
    * PUT /profile
    */

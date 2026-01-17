@@ -2,15 +2,41 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Inject,
+  OnModuleInit,
 } from "@nestjs/common";
+import { ClientKafka } from "@nestjs/microservices";
 import { Notification, NotificationType } from "./notification.entity";
 import { NotificationRepository } from "./notification.repository";
+import { KAFKA_SERVICE } from "../shared/kafka/kafka.module";
+import { Subject } from "rxjs";
+
+export interface PushNotificationPayload {
+  userId: string;
+  title: string;
+  body: string;
+  data: Record<string, any>;
+  link?: string;
+  retryCount?: number;
+}
 
 @Injectable()
-export class NotificationsService {
+export class NotificationsService implements OnModuleInit {
+  private readonly notificationSubject = new Subject<{ userId: string; notification: Notification }>();
+
   constructor(
-    private readonly notificationRepository: NotificationRepository
+    private readonly notificationRepository: NotificationRepository,
+    @Inject(KAFKA_SERVICE) private readonly kafkaClient: ClientKafka
   ) {}
+
+  async onModuleInit() {
+    await this.kafkaClient.connect();
+  }
+
+  // Stream for SSE
+  getNotificationStream() {
+    return this.notificationSubject.asObservable();
+  }
 
   async createNotification(
     recipientId: string,
@@ -26,7 +52,8 @@ export class NotificationsService {
       return null as any;
     }
 
-    return this.notificationRepository.create({
+    // 1. Save to DB
+    const notification = await this.notificationRepository.create({
       recipientId,
       actorId: actorId || null,
       type,
@@ -35,6 +62,22 @@ export class NotificationsService {
       data,
       link,
     });
+
+    // 2. Emit to real-time stream (SSE)
+    this.notificationSubject.next({ userId: recipientId, notification });
+
+    // 3. Emit to Kafka for push notification (async, with retry support)
+    const payload: PushNotificationPayload = {
+      userId: recipientId,
+      title,
+      body: message,
+      data,
+      link,
+      retryCount: 0,
+    };
+    this.kafkaClient.emit("push.notification.send", payload);
+
+    return notification;
   }
 
   async getNotifications(

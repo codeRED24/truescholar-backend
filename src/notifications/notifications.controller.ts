@@ -6,11 +6,15 @@ import {
   Param,
   Query,
   UseGuards,
+  Sse,
+  MessageEvent,
 } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { AuthGuard } from "../authentication_module/better-auth/guards/auth.guard";
 import { User } from "../authentication_module/better-auth/decorators/auth.decorators";
 import { NotificationsService } from "./notifications.service";
+import { Observable } from "rxjs";
+import { filter, map } from "rxjs/operators";
 
 class PaginationDto {
   page?: number = 1;
@@ -23,6 +27,17 @@ class PaginationDto {
 @Controller("notifications")
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
+
+  @Sse("stream")
+  @ApiOperation({ summary: "Real-time notification stream (SSE)" })
+  streamNotifications(@User() user: { id: string }): Observable<MessageEvent> {
+    return this.notificationsService.getNotificationStream().pipe(
+      filter((payload) => payload.userId === user.id),
+      map((payload) => ({
+        data: this.mapToResponse(payload.notification),
+      } as MessageEvent))
+    );
+  }
 
   @Get()
   @ApiOperation({ summary: "Get all notifications" })

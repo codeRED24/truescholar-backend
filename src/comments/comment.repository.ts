@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, IsNull } from "typeorm";
+import { Repository, Brackets } from "typeorm";
 import { Comment } from "./comment.entity";
 
 @Injectable()
@@ -39,18 +39,42 @@ export class CommentRepository {
   async getPostComments(
     postId: string,
     page: number,
-    limit: number
+    limit: number,
+    cursor?: string
   ): Promise<Comment[]> {
-    const skip = (page - 1) * limit;
-    // Only return root-level comments (no parent)
-    // Replies are loaded separately via getReplies
-    return this.repo.find({
-      where: { postId, parentId: IsNull(), isDeleted: false },
-      relations: ["author"],
-      order: { createdAt: "ASC" },
-      skip,
-      take: limit,
-    });
+    const queryBuilder = this.repo
+      .createQueryBuilder("comment")
+      .leftJoinAndSelect("comment.author", "author")
+      .where("comment.postId = :postId", { postId })
+      .andWhere("comment.parentId IS NULL")
+      .andWhere("comment.isDeleted = :isDeleted", { isDeleted: false });
+
+    if (cursor) {
+      // Cursor format: "timestamp_id"
+      const [dateStr, id] = cursor.split("_");
+      const date = new Date(dateStr);
+
+      if (!isNaN(date.getTime()) && id) {
+        queryBuilder.andWhere(
+          new Brackets((qb) => {
+            qb.where("date_trunc('milliseconds', comment.createdAt) > :date", {
+              date,
+            }).orWhere(
+              "date_trunc('milliseconds', comment.createdAt) = :date AND comment.id > :id",
+              { date, id }
+            );
+          })
+        );
+      }
+    } else {
+      queryBuilder.skip((page - 1) * limit);
+    }
+
+    return queryBuilder
+      .orderBy("comment.createdAt", "ASC")
+      .addOrderBy("comment.id", "ASC")
+      .take(limit)
+      .getMany();
   }
 
   async getReplies(
@@ -62,7 +86,7 @@ export class CommentRepository {
     return this.repo.find({
       where: { parentId, isDeleted: false },
       relations: ["author"],
-      order: { createdAt: "ASC" },
+      order: { createdAt: "ASC", id: "ASC" },
       skip,
       take: limit,
     });

@@ -58,7 +58,6 @@ import { ReviewsModule } from "./reviews/reviews.module";
 import { ProfileModule } from "./profile/profile.module";
 import { SharedModule } from "./shared/shared.module";
 import { PostsModule } from "./posts/posts.module";
-import { ConnectionsModule } from "./connections/connections.module";
 import { CommentsModule } from "./comments/comments.module";
 import { LikesModule } from "./likes/likes.module";
 // import { JobsModule } from "./jobs/jobs.module";
@@ -72,9 +71,11 @@ import { EventsModule } from "./events/events.module";
 import { SearchIndexModule } from "./helper_entities/search-index/search-index.module";
 import { FeedModule } from "./feed/feed.module";
 import { KafkaModule } from "./shared/kafka/kafka.module";
+import { EventEmitterModule } from "@nestjs/event-emitter";
 
 @Module({
   imports: [
+    EventEmitterModule.forRoot(),
     KafkaModule,
     LoggerModule,
     ThrottlerModule.forRoot([
@@ -150,7 +151,6 @@ import { KafkaModule } from "./shared/kafka/kafka.module";
     ProfileModule,
     SharedModule,
     PostsModule,
-    ConnectionsModule,
     CommentsModule,
     LikesModule,
     // JobsModule,

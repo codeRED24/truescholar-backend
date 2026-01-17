@@ -51,11 +51,12 @@ export class CommentsController {
     @Param("postId") postId: string,
     @Query() query: CommentsQueryDto
   ) {
-    const limit = Math.min(query.limit || 20, 50);
+    const limit = Math.min(query.limit || 10, 50);
     const comments = await this.commentsService.getPostComments(
       postId,
       query.page || 1,
-      limit + 1 // Fetch one extra to determine if there are more
+      limit + 1, // Fetch one extra to determine if there are more
+      query.cursor
     );
 
     const hasMore = comments.length > limit;
@@ -71,7 +72,9 @@ export class CommentsController {
     // Use the last comment's createdAt as cursor for pagination
     const nextCursor =
       hasMore && displayComments.length > 0
-        ? displayComments[displayComments.length - 1].createdAt.toISOString()
+        ? `${displayComments[
+            displayComments.length - 1
+          ].createdAt.toISOString()}_${displayComments[displayComments.length - 1].id}`
         : null;
 
     return {
@@ -96,7 +99,7 @@ export class CommentsController {
     const replies = await this.commentsService.getReplies(
       commentId,
       query.page || 1,
-      Math.min(query.limit || 20, 50)
+      Math.min(query.limit || 10, 50)
     );
 
     // Fetch like statuses and reply counts for replies

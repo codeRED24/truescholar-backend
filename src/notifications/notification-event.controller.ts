@@ -2,6 +2,15 @@ import { Controller } from "@nestjs/common";
 import { EventPattern, Payload } from "@nestjs/microservices";
 import { NotificationsService } from "./notifications.service";
 import { NotificationType } from "./notification.entity";
+import {
+  ENGAGEMENT_EVENTS,
+  PostLikedEvent,
+  CommentLikedEvent,
+  COMMENT_EVENTS,
+  CommentCreatedEvent,
+  SOCIAL_GRAPH_EVENTS,
+  UserFollowedEvent,
+} from "../shared/events";
 
 /**
  * Kafka Event Controller for handling notification-related events.
@@ -11,9 +20,9 @@ import { NotificationType } from "./notification.entity";
 export class NotificationEventController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
-  @EventPattern("likes.post.liked")
-  async handlePostLiked(@Payload() event: any) {
-    const { postId, likerId, authorId } = event.payload || event;
+  @EventPattern(ENGAGEMENT_EVENTS.POST_LIKED)
+  async handlePostLiked(@Payload() event: PostLikedEvent) {
+    const { postId, likerId, authorId } = event.payload;
     if (likerId === authorId) return;
 
     await this.notificationsService.createNotification(
@@ -27,10 +36,9 @@ export class NotificationEventController {
     );
   }
 
-  @EventPattern("comments.added")
-  async handleCommentAdded(@Payload() event: any) {
-    const { commentId, postId, authorId, postAuthorId } =
-      event.payload || event;
+  @EventPattern(COMMENT_EVENTS.CREATED)
+  async handleCommentAdded(@Payload() event: CommentCreatedEvent) {
+    const { commentId, postId, authorId, postAuthorId } = event.payload;
 
     if (authorId !== postAuthorId) {
       await this.notificationsService.createNotification(
@@ -45,9 +53,9 @@ export class NotificationEventController {
     }
   }
 
-  @EventPattern("likes.comment.liked")
-  async handleCommentLiked(@Payload() event: any) {
-    const { commentId, likerId, commentAuthorId } = event.payload || event;
+  @EventPattern(ENGAGEMENT_EVENTS.COMMENT_LIKED)
+  async handleCommentLiked(@Payload() event: CommentLikedEvent) {
+    const { commentId, likerId, commentAuthorId } = event.payload;
     if (likerId === commentAuthorId) return;
 
     await this.notificationsService.createNotification(
@@ -90,9 +98,9 @@ export class NotificationEventController {
     );
   }
 
-  @EventPattern("follows.created")
-  async handleNewFollower(@Payload() event: any) {
-    const { followerId, followingId } = event.payload || event;
+  @EventPattern(SOCIAL_GRAPH_EVENTS.USER_FOLLOWED)
+  async handleNewFollower(@Payload() event: UserFollowedEvent) {
+    const { followerId, followingId } = event.payload;
 
     await this.notificationsService.createNotification(
       followingId,

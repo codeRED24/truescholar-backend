@@ -2,6 +2,12 @@ import { Controller, Logger } from "@nestjs/common";
 import { EventPattern, Payload } from "@nestjs/microservices";
 import { SearchService } from "./search.service";
 import { SearchEntityType } from "@/common/enums";
+import {
+  POST_EVENTS,
+  PostCreatedEvent,
+  PostUpdatedEvent,
+  PostDeletedEvent,
+} from "../../shared/events";
 
 /**
  * Kafka Event Controller for handling search index events.
@@ -13,8 +19,8 @@ export class SearchEventController {
 
   constructor(private readonly searchService: SearchService) {}
 
-  @EventPattern("post.created")
-  async handlePostCreated(@Payload() event: any) {
+  @EventPattern(POST_EVENTS.CREATED)
+  async handlePostCreated(@Payload() event: PostCreatedEvent) {
     await this.searchService.indexEntity(
       SearchEntityType.POST,
       event.aggregateId,
@@ -22,8 +28,8 @@ export class SearchEventController {
     );
   }
 
-  @EventPattern("post.updated")
-  async handlePostUpdated(@Payload() event: any) {
+  @EventPattern(POST_EVENTS.UPDATED)
+  async handlePostUpdated(@Payload() event: PostUpdatedEvent) {
     await this.searchService.indexEntity(
       SearchEntityType.POST,
       event.aggregateId,
@@ -31,8 +37,8 @@ export class SearchEventController {
     );
   }
 
-  @EventPattern("post.deleted")
-  async handlePostDeleted(@Payload() event: any) {
+  @EventPattern(POST_EVENTS.DELETED)
+  async handlePostDeleted(@Payload() event: PostDeletedEvent) {
     await this.searchService.removeEntity(
       SearchEntityType.POST,
       event.aggregateId

@@ -1,15 +1,16 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, In } from "typeorm";
-import { Post } from "../posts/post.entity";
+import { Post, PostVisibility } from "../posts/post.entity";
 import { FeedCacheService } from "./feed-cache.service";
 import { TrendingService } from "./trending.service";
-import { ConnectionsService } from "../connections/connections.service";
 import { LikesService } from "../likes/likes.service";
-import { FeedPostDto, FeedResponseDto } from "./dto";
+import { FollowersService } from "../followers/followers.service";
+import { DiscoveryService } from "../followers/discovery.service";
+import { FeedPostDto, FeedResponseDto, FeedItemDto } from "./dto";
 
 // Feed blend ratios for logged-in users
-const CONNECTION_RATIO = 0.7; // 70%
+const FOLLOWING_RATIO = 0.7; // 70%
 const TRENDING_RATIO = 0.25; // 25%
 // PROMOTED_RATIO = 0.05; // 5% - future
 
@@ -17,10 +18,14 @@ const TRENDING_RATIO = 0.25; // 25%
 const TRENDING_POSITIONS = [4, 8, 12, 16, 20]; // Every 4th after position 3
 // const PROMOTED_POSITIONS = [9, 19, 29]; // Future
 
+// Positions for "Who to follow" suggestions (sparse: 3, 53, 103...)
+const FIRST_SUGGESTION_POSITION = 3;
+const SUGGESTION_INTERVAL = 50;
+
 interface ScoredPost {
   postId: string;
   score: number;
-  source: "connection" | "trending" | "promoted";
+  source: "following" | "trending" | "promoted";
   timestamp: number;
 }
 
@@ -31,8 +36,9 @@ export class FeedService {
     private readonly postRepository: Repository<Post>,
     private readonly feedCache: FeedCacheService,
     private readonly trendingService: TrendingService,
-    private readonly connectionsService: ConnectionsService,
-    private readonly likesService: LikesService
+    private readonly likesService: LikesService,
+    private readonly followersService: FollowersService,
+    private readonly discoveryService: DiscoveryService
   ) {}
 
   /**
@@ -43,8 +49,8 @@ export class FeedService {
     cursor: string | undefined,
     limit: number
   ): Promise<FeedResponseDto> {
-    // 1. Get connection posts from pregenerated timeline
-    const connectionPosts = await this.getConnectionPosts(
+    // 1. Get posts from followed users from pregenerated timeline
+    const followingPosts = await this.getFollowingPosts(
       userId,
       cursor,
       limit * 2
@@ -58,8 +64,8 @@ export class FeedService {
 
     // 4. Combine and dedupe
     const allPosts = this.mergeAndDedupe([
-      ...connectionPosts,
-      ...celebrityPosts.map((p) => ({ ...p, source: "connection" as const })),
+      ...followingPosts,
+      ...celebrityPosts.map((p) => ({ ...p, source: "following" as const })),
       ...trendingPosts,
     ]);
 
@@ -76,16 +82,31 @@ export class FeedService {
       postIds
     );
 
-    // 8. Map to response DTOs
-    const posts = this.mapToResponse(hydratedPosts, likeStatuses);
+    // 8. Get follow status for post authors
+    const followingIds = await this.followersService.getFollowingIds(userId);
+    const followingSet = new Set(followingIds);
 
-    // 9. Calculate next cursor
+    // 9. Map to response DTOs
+    const postDtos = this.mapToResponse(
+      hydratedPosts,
+      likeStatuses,
+      followingSet,
+      userId
+    );
+
+    // 10. Get user suggestions for injection
+    const suggestions = await this.discoveryService.getSuggestions(userId, 3);
+
+    // 11. Build heterogeneous items array with suggestions injected
+    const items = this.buildFeedItems(postDtos, suggestions);
+
+    // 12. Calculate next cursor
     const nextCursor =
-      posts.length >= limit
+      postDtos.length >= limit
         ? interleaved[interleaved.length - 1]?.timestamp?.toString() || null
         : null;
 
-    return { posts, nextCursor };
+    return { items, nextCursor };
   }
 
   /**
@@ -107,19 +128,30 @@ export class FeedService {
     // Hydrate posts
     const hydratedPosts = await this.hydratePosts(resultIds);
 
-    // Map to response (no like status for guests)
-    const posts = this.mapToResponse(hydratedPosts, new Map());
+    // Map to response (no like status or follow status for guests)
+    const postDtos = this.mapToResponse(
+      hydratedPosts,
+      new Map(),
+      new Set(),
+      undefined
+    );
+
+    // Build items without suggestions for guest feed
+    const items: FeedItemDto[] = postDtos.map((post) => ({
+      type: "post" as const,
+      post,
+    }));
 
     // Next cursor is the score of last item
     const nextCursor = hasMore ? scores[limit - 1]?.toString() || null : null;
 
-    return { posts, nextCursor };
+    return { items, nextCursor };
   }
 
   /**
-   * Get connection posts from pregenerated timeline
+   * Get posts from followed users from pregenerated timeline
    */
-  private async getConnectionPosts(
+  private async getFollowingPosts(
     userId: string,
     cursor: string | undefined,
     limit: number
@@ -133,8 +165,8 @@ export class FeedService {
 
     return timeline.postIds.map((postId, idx) => ({
       postId,
-      score: this.calculateScore(timeline.scores[idx], "connection"),
-      source: "connection" as const,
+      score: this.calculateScore(timeline.scores[idx], "following"),
+      source: "following" as const,
       timestamp: timeline.scores[idx],
     }));
   }
@@ -147,9 +179,9 @@ export class FeedService {
     cursor: string | undefined,
     limit: number
   ): Promise<ScoredPost[]> {
-    // Get connection IDs
-    const connectionIds = await this.getConnectionIds(userId);
-    const allAuthorIds = [userId, ...connectionIds];
+    // Get following IDs (people the user follows)
+    const followingIds = await this.getFollowingIds(userId);
+    const allAuthorIds = [userId, ...followingIds];
 
     if (allAuthorIds.length === 0) {
       return [];
@@ -162,7 +194,7 @@ export class FeedService {
       .where("post.isDeleted = false")
       .andWhere("post.authorId IN (:...authorIds)", { authorIds: allAuthorIds })
       .andWhere("post.visibility IN (:...visibilities)", {
-        visibilities: ["public", "connections"],
+        visibilities: [PostVisibility.PUBLIC, PostVisibility.CONNECTIONS],
       });
 
     if (cursor) {
@@ -188,8 +220,8 @@ export class FeedService {
 
     return posts.map((post) => ({
       postId: post.id,
-      score: this.calculateScore(post.createdAt.getTime(), "connection"),
-      source: "connection" as const,
+      score: this.calculateScore(post.createdAt.getTime(), "following"),
+      source: "following" as const,
       timestamp: post.createdAt.getTime(),
     }));
   }
@@ -227,8 +259,8 @@ export class FeedService {
     cursor: string | undefined,
     limit: number
   ): Promise<ScoredPost[]> {
-    const connectionIds = await this.getConnectionIds(userId);
-    const celebrityIds = await this.feedCache.filterCelebrities(connectionIds);
+    const followingIds = await this.getFollowingIds(userId);
+    const celebrityIds = await this.feedCache.filterCelebrities(followingIds);
 
     if (celebrityIds.length === 0) {
       return [];
@@ -242,8 +274,8 @@ export class FeedService {
 
     return posts.map((p) => ({
       postId: p.postId,
-      score: this.calculateScore(p.score, "connection"),
-      source: "connection" as const,
+      score: this.calculateScore(p.score, "following"),
+      source: "following" as const,
       timestamp: p.score,
     }));
   }
@@ -253,12 +285,12 @@ export class FeedService {
    */
   private calculateScore(
     timestamp: number,
-    source: "connection" | "trending" | "promoted",
+    source: "following" | "trending" | "promoted",
     engagementScore?: number
   ): number {
     // Base score by source
     const baseScore =
-      source === "connection" ? 1.0 : source === "trending" ? 0.6 : 0.8;
+      source === "following" ? 1.0 : source === "trending" ? 0.6 : 0.8;
 
     // Recency decay: e^(-λ * hoursOld), λ = 0.02
     const hoursOld = (Date.now() - timestamp) / (1000 * 60 * 60);
@@ -296,22 +328,22 @@ export class FeedService {
    * Interleave posts to ensure variety
    */
   private interleave(posts: ScoredPost[], limit: number): ScoredPost[] {
-    const connectionPosts = posts.filter((p) => p.source === "connection");
+    const followingPosts = posts.filter((p) => p.source === "following");
     const trendingPosts = posts.filter((p) => p.source === "trending");
 
     const result: ScoredPost[] = [];
-    let connIdx = 0;
+    let followIdx = 0;
     let trendIdx = 0;
 
     for (let pos = 1; pos <= limit && result.length < limit; pos++) {
       if (TRENDING_POSITIONS.includes(pos) && trendIdx < trendingPosts.length) {
         // Insert trending at designated positions
         result.push(trendingPosts[trendIdx++]);
-      } else if (connIdx < connectionPosts.length) {
-        // Fill with connection posts
-        result.push(connectionPosts[connIdx++]);
+      } else if (followIdx < followingPosts.length) {
+        // Fill with following posts
+        result.push(followingPosts[followIdx++]);
       } else if (trendIdx < trendingPosts.length) {
-        // Fallback to trending if no more connection posts
+        // Fallback to trending if no more following posts
         result.push(trendingPosts[trendIdx++]);
       }
     }
@@ -364,40 +396,52 @@ export class FeedService {
    */
   private mapToResponse(
     posts: Post[],
-    likeStatuses: Map<string, boolean>
+    likeStatuses: Map<string, boolean>,
+    followingSet: Set<string>,
+    currentUserId: string | undefined
   ): FeedPostDto[] {
-    return posts.map((post) => ({
-      id: post.id,
-      content: post.content,
-      media: post.media || [],
-      visibility: post.visibility,
-      authorType: post.authorType,
-      type: post.type,
-      taggedCollegeId: post.taggedCollegeId,
-      likeCount: post.likeCount,
-      commentCount: post.commentCount,
-      createdAt: post.createdAt,
-      updatedAt: post.updatedAt,
-      author: post.author
-        ? {
-            id: post.author.id,
-            name: post.author.name,
-            image: post.author.image,
-            user_type: post.author.user_type,
-          }
-        : { id: post.authorId, name: "", image: undefined },
-      hasLiked: likeStatuses.get(post.id) || false,
-    }));
+    return posts.map((post) => {
+      const authorId = post.author?.id || post.authorId;
+      // User doesn't follow themselves, and can't follow if not logged in
+      const isFollowing =
+        currentUserId && authorId !== currentUserId
+          ? followingSet.has(authorId)
+          : false;
+
+      return {
+        id: post.id,
+        content: post.content,
+        media: post.media || [],
+        visibility: post.visibility,
+        authorType: post.authorType,
+        type: post.type,
+        taggedCollegeId: post.taggedCollegeId,
+        likeCount: post.likeCount,
+        commentCount: post.commentCount,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        author: post.author
+          ? {
+              id: post.author.id,
+              name: post.author.name,
+              image: post.author.image,
+              user_type: post.author.user_type,
+            }
+          : { id: post.authorId, name: "", image: undefined },
+        hasLiked: likeStatuses.get(post.id) || false,
+        isFollowing,
+      };
+    });
   }
 
   /**
-   * Get connection IDs with caching
+   * Get following IDs with caching
    */
-  private async getConnectionIds(userId: string): Promise<string[]> {
+  private async getFollowingIds(userId: string): Promise<string[]> {
     const cached = await this.feedCache.getConnectionIds(userId);
     if (cached) return cached;
 
-    const ids = await this.connectionsService.getConnectionUserIds(userId);
+    const ids = await this.followersService.getFollowingIds(userId);
     await this.feedCache.cacheConnectionIds(userId, ids);
     return ids;
   }
@@ -409,5 +453,50 @@ export class FeedService {
     // Pre-populate timeline on login
     await this.rebuildTimeline(userId, undefined, 50);
     console.log(`[Feed] Warmed cache for user ${userId}`);
+  }
+
+  /**
+   * Build heterogeneous feed items with suggestions injected at specific positions
+   * Pattern: inject at position 3, then every 50 posts (3, 53, 103...)
+   */
+  private buildFeedItems(
+    posts: FeedPostDto[],
+    suggestions: Array<{
+      id: string;
+      name: string;
+      image: string | null;
+      mutualCount: number;
+    }>
+  ): FeedItemDto[] {
+    const items: FeedItemDto[] = [];
+    let suggestionInjected = false;
+
+    for (let i = 0; i < posts.length; i++) {
+      // Check if we should inject suggestions at this position
+      const shouldInject =
+        suggestions.length > 0 &&
+        (i === FIRST_SUGGESTION_POSITION ||
+          (i > FIRST_SUGGESTION_POSITION &&
+            (i - FIRST_SUGGESTION_POSITION) % SUGGESTION_INTERVAL === 0));
+
+      if (shouldInject && !suggestionInjected) {
+        // Inject suggestion card (only once per feed page to avoid duplication)
+        items.push({
+          type: "suggestions",
+          suggestions: suggestions.map((s) => ({
+            id: s.id,
+            name: s.name,
+            image: s.image ?? undefined,
+            mutualCount: s.mutualCount,
+          })),
+        });
+        suggestionInjected = true;
+      }
+
+      // Add the post
+      items.push({ type: "post", post: posts[i] });
+    }
+
+    return items;
   }
 }
