@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Post, PostVisibility, PostMedia } from "./post.entity";
+import { EntityHandle } from "../handles/entity-handle.entity";
 import { AuthorType, PostType } from "@/common/enums";
 
 @Injectable()
@@ -19,6 +20,7 @@ export class PostRepository {
     authorType?: AuthorType;
     type?: PostType;
     taggedCollegeId?: number;
+    mentions?: EntityHandle[];
   }): Promise<Post> {
     const post = this.repo.create({
       authorId: data.authorId,
@@ -28,6 +30,7 @@ export class PostRepository {
       authorType: data.authorType || AuthorType.USER,
       type: data.type || PostType.GENERAL,
       taggedCollegeId: data.taggedCollegeId,
+      mentions: data.mentions || [],
     });
     return this.repo.save(post);
   }
@@ -74,12 +77,15 @@ export class PostRepository {
     data: Partial<
       Pick<
         Post,
-        "content" | "media" | "visibility" | "type" | "taggedCollegeId"
+        "content" | "media" | "visibility" | "type" | "taggedCollegeId" | "mentions"
       >
     >
   ): Promise<Post | null> {
     const post = await this.findById(id);
     if (!post) return null;
+    
+    // For relations like mentions, we need to handle them carefully.
+    // Ideally repo.save() handles it if the object has the property.
     Object.assign(post, data);
     return this.repo.save(post);
   }

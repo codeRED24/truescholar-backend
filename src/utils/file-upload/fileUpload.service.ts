@@ -13,7 +13,7 @@ export class FileUploadService {
   async uploadFile(
     file: File,
     folder: string,
-    extraName?: string | number
+    extraName?: string | number,
   ): Promise<string> {
     // sanitize original name: replace whitespace with '-' and remove path segments
     const safeOriginalName = file.originalname
@@ -29,7 +29,7 @@ export class FileUploadService {
       Key: filePath,
       Body: file.buffer,
       ContentType: file.mimetype,
-      ACL: "public-read",
+      // ACL: "public-read",
     };
     const uploadResult = await this.s3.upload(params).promise();
     return uploadResult.Location;
@@ -39,7 +39,7 @@ export class FileUploadService {
     const Key = filePath
       .replace(
         /^https:\/\/s3\.ap-south-1\.amazonaws\.com\/kapp-assets-store2.0\//,
-        ""
+        "",
       )
       .replace(/^\//, ""); // Ensure no leading slash
 

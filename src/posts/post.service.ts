@@ -4,19 +4,35 @@ import {
   NotFoundException,
   ForbiddenException,
   OnModuleInit,
+  Logger,
 } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, LessThan, In } from "typeorm";
 import { ClientKafka } from "@nestjs/microservices";
+import { Cron, CronExpression } from "@nestjs/schedule";
 import { KAFKA_SERVICE } from "../shared/kafka/kafka.module";
 import { Post, PostVisibility, PostMedia } from "./post.entity";
+import { PostMediaUpload, MediaType } from "./post-media-upload.entity";
+import { EntityHandle } from "../handles/entity-handle.entity";
 import { PostRepository } from "./post.repository";
+import { FileUploadService } from "../utils/file-upload/fileUpload.service";
 import { AuthorType, PostType } from "@/common/enums";
 import { randomUUID } from "crypto";
+import { File } from "@nest-lab/fastify-multer";
+
+import { HandlesService } from "../handles/handles.service";
 
 @Injectable()
 export class PostsService implements OnModuleInit {
+  private readonly logger = new Logger(PostsService.name);
+
   constructor(
     private readonly postRepository: PostRepository,
-    @Inject(KAFKA_SERVICE) private readonly kafkaClient: ClientKafka
+    @Inject(KAFKA_SERVICE) private readonly kafkaClient: ClientKafka,
+    @InjectRepository(PostMediaUpload)
+    private readonly mediaUploadRepository: Repository<PostMediaUpload>,
+    private readonly fileUploadService: FileUploadService,
+    private readonly handlesService: HandlesService
   ) {}
 
   async onModuleInit() {
@@ -32,6 +48,8 @@ export class PostsService implements OnModuleInit {
     type?: PostType,
     taggedCollegeId?: number
   ): Promise<Post> {
+    const mentions = await this.processMentions(content);
+
     const post = await this.postRepository.create({
       authorId,
       content,
@@ -40,7 +58,14 @@ export class PostsService implements OnModuleInit {
       authorType,
       type,
       taggedCollegeId,
+      mentions,
     });
+
+    // Mark media as used so it won't be cleaned up
+    if (media && media.length > 0) {
+      const mediaUrls = media.map((m) => m.url);
+      await this.markMediaAsUsed(mediaUrls, authorId);
+    }
 
     this.kafkaClient.emit("posts.post.created", {
       eventId: randomUUID(),
@@ -54,10 +79,31 @@ export class PostsService implements OnModuleInit {
         content,
         mediaCount: media?.length || 0,
         taggedCollegeId,
+        mentionCount: mentions.length,
       },
     });
 
     return post;
+  }
+
+  private async processMentions(content: string): Promise<EntityHandle[]> {
+    if (!content) return [];
+    
+    // Regex to find @handle (alphanumeric + underscore) OR react-mentions format @[display](handle)
+    const simpleMentionRegex = /@([a-zA-Z0-9_]+)/g;
+    const markupMentionRegex = /@\[[^\]]+\]\(([a-zA-Z0-9_]+)\)/g;
+
+    const simpleMatches = [...content.matchAll(simpleMentionRegex)].map(m => m[1]);
+    const markupMatches = [...content.matchAll(markupMentionRegex)].map(m => m[1]);
+    
+    const handles = [...simpleMatches, ...markupMatches];
+    
+    if (handles.length === 0) return [];
+    
+    // Remove duplicates
+    const uniqueHandles = [...new Set(handles)];
+    
+    return this.handlesService.findByHandles(uniqueHandles);
   }
 
   async getPost(
@@ -112,12 +158,19 @@ export class PostsService implements OnModuleInit {
     if (!post) throw new NotFoundException("Post not found");
     if (post.authorId !== userId)
       throw new ForbiddenException("You can only edit your own posts");
+
+    let mentions: EntityHandle[] | undefined;
+    if (content !== undefined) {
+      mentions = await this.processMentions(content);
+    }
+
     const updatedPost = (await this.postRepository.update(postId, {
       content,
       media,
       visibility,
       type,
       taggedCollegeId,
+      mentions,
     })) as Post;
 
     // Emit update event for cache invalidation and search indexing
@@ -127,6 +180,7 @@ export class PostsService implements OnModuleInit {
     if (visibility !== undefined) changedFields.push("visibility");
     if (type !== undefined) changedFields.push("type");
     if (taggedCollegeId !== undefined) changedFields.push("taggedCollegeId");
+    if (mentions !== undefined) changedFields.push("mentions");
 
     this.kafkaClient.emit("posts.post.updated", {
       eventId: randomUUID(),
@@ -189,5 +243,100 @@ export class PostsService implements OnModuleInit {
 
   async findById(postId: string): Promise<Post | null> {
     return this.postRepository.findById(postId);
+  }
+
+  // ===== Media Upload Methods =====
+
+  /**
+   * Upload a media file for a post. File is stored in S3 and tracked in DB.
+   * Initially marked as unused - will be marked as used when attached to a post.
+   */
+  async uploadMedia(
+    file: File,
+    uploaderId: string
+  ): Promise<{ url: string; type: MediaType }> {
+    // Determine media type from mimetype
+    let mediaType: MediaType = MediaType.IMAGE;
+    if (file.mimetype.startsWith("video/")) {
+      mediaType = MediaType.VIDEO;
+    } else if (
+      file.mimetype.startsWith("application/") ||
+      file.mimetype === "text/plain"
+    ) {
+      mediaType = MediaType.DOCUMENT;
+    }
+
+    // Upload to S3
+    const url = await this.fileUploadService.uploadFile(
+      file,
+      "posts-media",
+      uploaderId
+    );
+
+    // Track in database as unused
+    const mediaUpload = this.mediaUploadRepository.create({
+      url,
+      type: mediaType,
+      uploaderId,
+    });
+    await this.mediaUploadRepository.save(mediaUpload);
+
+    this.logger.log(`Media uploaded: ${url} by user ${uploaderId}`);
+
+    return { url, type: mediaType };
+  }
+
+  /**
+   * Mark media URLs as used (called when a post is created with these URLs).
+   * Deletes the tracking record, as it's no longer temporary.
+   */
+  async markMediaAsUsed(urls: string[], userId: string): Promise<void> {
+    if (!urls || urls.length === 0) return;
+
+    await this.mediaUploadRepository.delete({
+      url: In(urls),
+      uploaderId: userId,
+    });
+
+    this.logger.log(`Marked ${urls.length} media items as used (deleted tracking) for user ${userId}`);
+  }
+
+  /**
+   * Cleanup orphaned media files.
+   * Runs daily at midnight. Deletes unused media older than 24 hours.
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async cleanupOrphanedMedia(): Promise<void> {
+    this.logger.log("Starting orphaned media cleanup...");
+
+    const cutoffDate = new Date();
+    cutoffDate.setHours(cutoffDate.getHours() - 24);
+
+    // Find unused media older than 24 hours
+    const orphanedMedia = await this.mediaUploadRepository.find({
+      where: {
+        createdAt: LessThan(cutoffDate),
+      },
+    });
+
+    if (orphanedMedia.length === 0) {
+      this.logger.log("No orphaned media to cleanup.");
+      return;
+    }
+
+    this.logger.log(`Found ${orphanedMedia.length} orphaned media files to delete.`);
+
+    // Delete from S3 and database
+    for (const media of orphanedMedia) {
+      try {
+        await this.fileUploadService.deleteFileByPath(media.url);
+        await this.mediaUploadRepository.delete(media.id);
+        this.logger.log(`Deleted orphaned media: ${media.url}`);
+      } catch (error) {
+        this.logger.error(`Failed to delete orphaned media ${media.url}:`, error);
+      }
+    }
+
+    this.logger.log(`Orphaned media cleanup complete. Deleted ${orphanedMedia.length} files.`);
   }
 }

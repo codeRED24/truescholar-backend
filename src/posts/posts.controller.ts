@@ -8,8 +8,12 @@ import {
   Param,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from "@nestjs/common";
-import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from "@nestjs/swagger";
+import { FileInterceptor, File } from "@nest-lab/fastify-multer";
 import { Throttle, ThrottlerGuard } from "@nestjs/throttler";
 import { AuthGuard } from "../authentication_module/better-auth/guards/auth.guard";
 import { User } from "../authentication_module/better-auth/decorators/auth.decorators";
@@ -28,6 +32,53 @@ export class PostsController {
     private readonly followersService: FollowersService,
     private readonly likesService: LikesService
   ) {}
+
+  @Post("media")
+  @ApiOperation({ summary: "Upload media for a post" })
+  @ApiConsumes("multipart/form-data")
+  @UseInterceptors(FileInterceptor("file"))
+  async uploadMedia(
+    @User() user: { id: string },
+    @UploadedFile() file: File
+  ) {
+    if (!file) {
+      throw new BadRequestException("No file uploaded");
+    }
+
+    // Validate file type
+    const allowedMimeTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "video/mp4",
+      "video/quicktime",
+      "video/webm",
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      throw new BadRequestException(
+        "Invalid file type. Allowed: Images, Videos (MP4, MOV, WebM), and Documents (PDF, DOC)"
+      );
+    }
+
+    // Validate file size (10MB for images/docs, 100MB for videos)
+    const maxSize = file.mimetype.startsWith("video/")
+      ? 100 * 1024 * 1024
+      : 10 * 1024 * 1024;
+
+    if (file.size > maxSize) {
+      throw new BadRequestException(
+        `File too large. Max size: ${file.mimetype.startsWith("video/") ? "100MB" : "10MB"}`
+      );
+    }
+
+    const result = await this.postsService.uploadMedia(file, user.id);
+    return result;
+  }
 
   @Post()
   @ApiOperation({ summary: "Create a new post" })

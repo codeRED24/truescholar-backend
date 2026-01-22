@@ -72,6 +72,8 @@ import { SearchIndexModule } from "./helper_entities/search-index/search-index.m
 import { FeedModule } from "./feed/feed.module";
 import { KafkaModule } from "./shared/kafka/kafka.module";
 import { EventEmitterModule } from "@nestjs/event-emitter";
+import { HandlesModule } from "./handles/handles.module";
+import { CompanyModule } from "./company/company.module";
 
 @Module({
   imports: [
@@ -163,6 +165,8 @@ import { EventEmitterModule } from "@nestjs/event-emitter";
     EventsModule,
     SearchIndexModule,
     FeedModule,
+    HandlesModule,
+    CompanyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

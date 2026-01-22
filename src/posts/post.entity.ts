@@ -7,9 +7,12 @@ import {
   ManyToOne,
   JoinColumn,
   Index,
+  ManyToMany,
+  JoinTable,
 } from "typeorm";
 import { User } from "../authentication_module/better-auth/entities/users.entity";
 import { CollegeInfo } from "../college/college-info/college-info.entity";
+import { EntityHandle } from "../handles/entity-handle.entity";
 import { AuthorType, PostType } from "@/common/enums";
 
 export enum PostVisibility {
@@ -66,6 +69,14 @@ export class Post {
 
   @Column({ type: "jsonb", default: [] })
   media: PostMedia[];
+
+  @ManyToMany(() => EntityHandle)
+  @JoinTable({
+    name: "post_mentions",
+    joinColumn: { name: "postId", referencedColumnName: "id" },
+    inverseJoinColumn: { name: "handleId", referencedColumnName: "id" },
+  })
+  mentions: EntityHandle[];
 
   @Column({
     type: "enum",
