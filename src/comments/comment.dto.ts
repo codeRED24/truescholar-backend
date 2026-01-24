@@ -1,6 +1,7 @@
-import { IsString, IsNotEmpty, IsOptional } from "class-validator";
+import { IsString, IsNotEmpty, IsOptional, IsEnum, IsNumber } from "class-validator";
 import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { AuthorType } from "src/common/enums";
 
 export class CreateCommentDto {
   @ApiProperty()
@@ -12,7 +13,18 @@ export class CreateCommentDto {
   @IsOptional()
   @IsString()
   parentId?: string;
+
+  @ApiPropertyOptional({ enum: AuthorType })
+  @IsOptional()
+  @IsEnum(AuthorType)
+  authorType?: AuthorType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  collegeId?: number;
 }
+
 
 export class CommentsQueryDto {
   @ApiPropertyOptional({ default: 1 })
@@ -29,4 +41,15 @@ export class CommentsQueryDto {
   @IsOptional()
   @IsString()
   cursor?: string;
+
+  @ApiPropertyOptional({ enum: AuthorType })
+  @IsOptional()
+  @IsEnum(AuthorType)
+  authorType?: AuthorType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  collegeId?: number;
 }

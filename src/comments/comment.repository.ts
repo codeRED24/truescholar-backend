@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, Brackets } from "typeorm";
 import { Comment } from "./comment.entity";
+import { AuthorType } from "../common/enums";
 
 @Injectable()
 export class CommentRepository {
@@ -15,12 +16,16 @@ export class CommentRepository {
     authorId: string;
     content: string;
     parentId?: string;
+    authorType?: AuthorType;
+    collegeId?: number;
   }): Promise<Comment> {
     const comment = this.repo.create({
       postId: data.postId,
       authorId: data.authorId,
       content: data.content,
       parentId: data.parentId || null,
+      authorType: data.authorType || AuthorType.USER,
+      collegeId: data.collegeId || null,
     });
     return this.repo.save(comment);
   }
@@ -32,7 +37,7 @@ export class CommentRepository {
   async findByIdWithAuthor(id: string): Promise<Comment | null> {
     return this.repo.findOne({
       where: { id, isDeleted: false },
-      relations: ["author"],
+      relations: ["author", "college"],
     });
   }
 
@@ -45,6 +50,7 @@ export class CommentRepository {
     const queryBuilder = this.repo
       .createQueryBuilder("comment")
       .leftJoinAndSelect("comment.author", "author")
+      .leftJoinAndSelect("comment.college", "college")
       .where("comment.postId = :postId", { postId })
       .andWhere("comment.parentId IS NULL")
       .andWhere("comment.isDeleted = :isDeleted", { isDeleted: false });
@@ -85,7 +91,7 @@ export class CommentRepository {
     const skip = (page - 1) * limit;
     return this.repo.find({
       where: { parentId, isDeleted: false },
-      relations: ["author"],
+      relations: ["author", "college"],
       order: { createdAt: "ASC", id: "ASC" },
       skip,
       take: limit,

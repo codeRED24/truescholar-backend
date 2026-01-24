@@ -7,6 +7,7 @@ import {
   Param,
   Query,
   UseGuards,
+  ForbiddenException,
 } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { Throttle, ThrottlerGuard } from "@nestjs/throttler";
@@ -16,6 +17,13 @@ import { CommentsService } from "./comments.service";
 import { CommentRepository } from "./comment.repository";
 import { CommentsQueryDto, CreateCommentDto } from "./comment.dto";
 import { LikesService } from "src/likes/likes.service";
+import { CollegeMemberService } from "src/college-member/college-member.service";
+import { AuthorType } from "src/common/enums";
+
+class LikeActionDto {
+  authorType?: AuthorType;
+  collegeId?: number;
+}
 
 @ApiTags("Comments")
 @ApiBearerAuth()
@@ -25,7 +33,8 @@ export class CommentsController {
   constructor(
     private readonly commentsService: CommentsService,
     private readonly commentRepository: CommentRepository,
-    private readonly likesService: LikesService
+    private readonly likesService: LikesService,
+    private readonly collegeMemberService: CollegeMemberService
   ) {}
 
   @Post()
@@ -35,11 +44,26 @@ export class CommentsController {
     @Param("postId") postId: string,
     @Body() dto: CreateCommentDto
   ) {
+    // Validate college admin status if acting as college
+    if (dto.authorType === AuthorType.COLLEGE && dto.collegeId) {
+      const isAdmin = await this.collegeMemberService.isCollegeAdmin(
+        user.id,
+        dto.collegeId
+      );
+      if (!isAdmin) {
+        throw new ForbiddenException(
+          "You are not authorized to act on behalf of this college"
+        );
+      }
+    }
+
     const comment = await this.commentsService.addComment(
       postId,
       user.id,
       dto.content,
-      dto.parentId
+      dto.parentId,
+      dto.authorType,
+      dto.collegeId
     );
     return this.mapToResponse(comment, false, 0);
   }
@@ -66,7 +90,12 @@ export class CommentsController {
     const commentIds = displayComments.map((c) => c.id);
     const [replyCounts, likeStatuses] = await Promise.all([
       this.commentRepository.getReplyCountsForComments(commentIds),
-      this.likesService.getLikeStatusForComments(user.id, commentIds),
+      this.likesService.getLikeStatusForComments(
+        user.id,
+        commentIds,
+        query.authorType,
+        query.collegeId
+      ),
     ]);
 
     // Use the last comment's createdAt as cursor for pagination
@@ -105,7 +134,12 @@ export class CommentsController {
     // Fetch like statuses and reply counts for replies
     const replyIds = replies.map((r) => r.id);
     const [likeStatuses, replyCounts] = await Promise.all([
-      this.likesService.getLikeStatusForComments(user.id, replyIds),
+      this.likesService.getLikeStatusForComments(
+        user.id,
+        replyIds,
+        query.authorType,
+        query.collegeId
+      ),
       this.commentRepository.getReplyCountsForComments(replyIds),
     ]);
 
@@ -134,9 +168,28 @@ export class CommentsController {
   @Throttle({ like: { limit: 30, ttl: 60000 } })
   async likeComment(
     @User() user: { id: string },
-    @Param("commentId") commentId: string
+    @Param("commentId") commentId: string,
+    @Body() dto: LikeActionDto
   ) {
-    await this.likesService.likeComment(user.id, commentId);
+    // Validate college admin status if acting as college
+    if (dto.authorType === AuthorType.COLLEGE && dto.collegeId) {
+      const isAdmin = await this.collegeMemberService.isCollegeAdmin(
+        user.id,
+        dto.collegeId
+      );
+      if (!isAdmin) {
+        throw new ForbiddenException(
+          "You are not authorized to act on behalf of this college"
+        );
+      }
+    }
+
+    await this.likesService.likeComment(
+      user.id,
+      commentId,
+      dto.authorType,
+      dto.collegeId
+    );
     return { success: true };
   }
 
@@ -146,13 +199,35 @@ export class CommentsController {
   @Throttle({ like: { limit: 30, ttl: 60000 } })
   async unlikeComment(
     @User() user: { id: string },
-    @Param("commentId") commentId: string
+    @Param("commentId") commentId: string,
+    @Body() dto: LikeActionDto
   ) {
-    await this.likesService.unlikeComment(user.id, commentId);
+    // Validate college admin status if acting as college
+    if (dto.authorType === AuthorType.COLLEGE && dto.collegeId) {
+      const isAdmin = await this.collegeMemberService.isCollegeAdmin(
+        user.id,
+        dto.collegeId
+      );
+      if (!isAdmin) {
+        throw new ForbiddenException(
+          "You are not authorized to act on behalf of this college"
+        );
+      }
+    }
+
+    await this.likesService.unlikeComment(
+      user.id,
+      commentId,
+      dto.authorType,
+      dto.collegeId
+    );
     return { success: true };
   }
 
   private mapToResponse(comment: any, hasLiked: boolean, replyCount: number) {
+    const isCollegeAuthor =
+      comment.authorType === AuthorType.COLLEGE && comment.college;
+
     return {
       id: comment.id,
       postId: comment.postId,
@@ -161,13 +236,26 @@ export class CommentsController {
       replyCount,
       createdAt: comment.createdAt,
       parentId: comment.parentId,
-      author: comment.author
+      author: isCollegeAuthor
+        ? {
+            id: comment.college.college_id.toString(),
+            name: comment.college.college_name,
+            image: comment.college.logo_img,
+            type: "college",
+          }
+        : comment.author
         ? {
             id: comment.author.id,
             name: comment.author.name,
             image: comment.author.image,
+            type: "user",
           }
-        : { id: comment.authorId, name: "", image: null },
+        : {
+            id: comment.authorId,
+            name: "",
+            image: null,
+            type: "user",
+          },
       hasLiked,
     };
   }

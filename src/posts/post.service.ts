@@ -16,11 +16,12 @@ import { PostMediaUpload, MediaType } from "./post-media-upload.entity";
 import { EntityHandle } from "../handles/entity-handle.entity";
 import { PostRepository } from "./post.repository";
 import { FileUploadService } from "../utils/file-upload/fileUpload.service";
-import { AuthorType, PostType } from "@/common/enums";
+import { AuthorType, PostType, CollegeRole } from "@/common/enums";
 import { randomUUID } from "crypto";
 import { File } from "@nest-lab/fastify-multer";
 
 import { HandlesService } from "../handles/handles.service";
+import { CollegeMemberService } from "../college-member/college-member.service";
 
 @Injectable()
 export class PostsService implements OnModuleInit {
@@ -32,7 +33,8 @@ export class PostsService implements OnModuleInit {
     @InjectRepository(PostMediaUpload)
     private readonly mediaUploadRepository: Repository<PostMediaUpload>,
     private readonly fileUploadService: FileUploadService,
-    private readonly handlesService: HandlesService
+    private readonly handlesService: HandlesService,
+    private readonly collegeMemberService: CollegeMemberService
   ) {}
 
   async onModuleInit() {
@@ -48,6 +50,26 @@ export class PostsService implements OnModuleInit {
     type?: PostType,
     taggedCollegeId?: number
   ): Promise<Post> {
+    // Verify permission if posting as college
+    if (authorType === AuthorType.COLLEGE) {
+      if (!taggedCollegeId) {
+        throw new ForbiddenException(
+          "taggedCollegeId is required when posting as a college"
+        );
+      }
+
+      const membership = await this.collegeMemberService.getMembership(
+        taggedCollegeId,
+        authorId
+      );
+
+      if (!membership || membership.role !== CollegeRole.COLLEGE_ADMIN) {
+        throw new ForbiddenException(
+          "You do not have permission to post as this college"
+        );
+      }
+    }
+
     const mentions = await this.processMentions(content);
 
     const post = await this.postRepository.create({

@@ -9,6 +9,7 @@ import { LikesModule } from "src/likes/likes.module";
 import { FollowersModule } from "src/followers/followers.module";
 import { FileUploadService } from "src/utils/file-upload/fileUpload.service";
 import { HandlesModule } from "src/handles/handles.module";
+import { CollegeMemberModule } from "src/college-member/college-member.module";
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { HandlesModule } from "src/handles/handles.module";
     forwardRef(() => LikesModule),
     forwardRef(() => FollowersModule),
     HandlesModule,
+    CollegeMemberModule,
   ],
   controllers: [PostsController],
   providers: [PostRepository, PostsService, FileUploadService],

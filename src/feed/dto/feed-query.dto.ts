@@ -23,4 +23,21 @@ export class FeedQueryDto {
   @Min(1)
   @Max(50)
   limit?: number = 20;
+
+  @ApiPropertyOptional({
+    description: "Author type for like status check (user or college)",
+    example: "user",
+  })
+  @IsOptional()
+  @IsString()
+  authorType?: string;
+
+  @ApiPropertyOptional({
+    description: "College ID when acting as college",
+    example: 123,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  collegeId?: number;
 }

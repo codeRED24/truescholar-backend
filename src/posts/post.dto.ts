@@ -106,4 +106,15 @@ export class FeedQueryDto {
   @ApiPropertyOptional({ default: 20 })
   @IsOptional()
   limit?: number = 20;
+
+  @ApiPropertyOptional({ enum: AuthorType })
+  @IsOptional()
+  @IsEnum(AuthorType)
+  authorType?: AuthorType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  collegeId?: number;
 }

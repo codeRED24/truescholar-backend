@@ -12,6 +12,7 @@ import { LikeRepository } from "./like.repository";
 import { PostsService } from "../posts/post.service";
 import { CommentsService } from "../comments/comments.service";
 import { randomUUID } from "crypto";
+import { AuthorType } from "../common/enums";
 
 @Injectable()
 export class LikesService implements OnModuleInit {
@@ -28,14 +29,24 @@ export class LikesService implements OnModuleInit {
     await this.kafkaClient.connect();
   }
 
-  async likePost(userId: string, postId: string): Promise<void> {
+  async likePost(
+    userId: string,
+    postId: string,
+    authorType?: AuthorType,
+    collegeId?: number
+  ): Promise<void> {
     const post = await this.postsService.findById(postId);
     if (!post) throw new NotFoundException("Post not found");
 
-    const hasLiked = await this.likeRepository.hasLikedPost(userId, postId);
+    const hasLiked = await this.likeRepository.hasLikedPost(
+      userId,
+      postId,
+      authorType,
+      collegeId
+    );
     if (hasLiked) throw new ConflictException("Already liked this post");
 
-    await this.likeRepository.likePost(userId, postId);
+    await this.likeRepository.likePost(userId, postId, authorType, collegeId);
     const newLikeCount = await this.postsService.incrementLikeCount(postId);
 
     // Always emit event for cache update
@@ -49,12 +60,24 @@ export class LikesService implements OnModuleInit {
         likerId: userId,
         authorId: post.authorId,
         likeCount: newLikeCount,
+        authorType: authorType || AuthorType.USER,
+        collegeId: collegeId || null,
       },
     });
   }
 
-  async unlikePost(userId: string, postId: string): Promise<void> {
-    const removed = await this.likeRepository.unlikePost(userId, postId);
+  async unlikePost(
+    userId: string,
+    postId: string,
+    authorType?: AuthorType,
+    collegeId?: number
+  ): Promise<void> {
+    const removed = await this.likeRepository.unlikePost(
+      userId,
+      postId,
+      authorType,
+      collegeId
+    );
     if (removed) {
       const newLikeCount = await this.postsService.decrementLikeCount(postId);
 
@@ -63,22 +86,40 @@ export class LikesService implements OnModuleInit {
         eventType: "engagement.post.unliked",
         aggregateId: postId,
         occurredAt: new Date().toISOString(),
-        payload: { postId, userId, likeCount: newLikeCount },
+        payload: {
+          postId,
+          userId,
+          likeCount: newLikeCount,
+          authorType: authorType || AuthorType.USER,
+          collegeId: collegeId || null,
+        },
       });
     }
   }
 
-  async likeComment(userId: string, commentId: string): Promise<void> {
+  async likeComment(
+    userId: string,
+    commentId: string,
+    authorType?: AuthorType,
+    collegeId?: number
+  ): Promise<void> {
     const comment = await this.commentsService.findById(commentId);
     if (!comment) throw new NotFoundException("Comment not found");
 
     const hasLiked = await this.likeRepository.hasLikedComment(
       userId,
-      commentId
+      commentId,
+      authorType,
+      collegeId
     );
     if (hasLiked) throw new ConflictException("Already liked this comment");
 
-    await this.likeRepository.likeComment(userId, commentId);
+    await this.likeRepository.likeComment(
+      userId,
+      commentId,
+      authorType,
+      collegeId
+    );
     await this.commentsService.incrementLikeCount(commentId);
 
     if (userId !== comment.authorId) {
@@ -93,37 +134,83 @@ export class LikesService implements OnModuleInit {
           likerId: userId,
           commentAuthorId: comment.authorId,
           likeCount: 0, // TODO: Get actual like count
+          authorType: authorType || AuthorType.USER,
+          collegeId: collegeId || null,
         },
       });
     }
   }
 
-  async unlikeComment(userId: string, commentId: string): Promise<void> {
-    const removed = await this.likeRepository.unlikeComment(userId, commentId);
+  async unlikeComment(
+    userId: string,
+    commentId: string,
+    authorType?: AuthorType,
+    collegeId?: number
+  ): Promise<void> {
+    const removed = await this.likeRepository.unlikeComment(
+      userId,
+      commentId,
+      authorType,
+      collegeId
+    );
     if (removed) {
       await this.commentsService.decrementLikeCount(commentId);
     }
   }
 
-  async hasLikedPost(userId: string, postId: string): Promise<boolean> {
-    return this.likeRepository.hasLikedPost(userId, postId);
+  async hasLikedPost(
+    userId: string,
+    postId: string,
+    authorType?: AuthorType,
+    collegeId?: number
+  ): Promise<boolean> {
+    return this.likeRepository.hasLikedPost(
+      userId,
+      postId,
+      authorType,
+      collegeId
+    );
   }
 
-  async hasLikedComment(userId: string, commentId: string): Promise<boolean> {
-    return this.likeRepository.hasLikedComment(userId, commentId);
+  async hasLikedComment(
+    userId: string,
+    commentId: string,
+    authorType?: AuthorType,
+    collegeId?: number
+  ): Promise<boolean> {
+    return this.likeRepository.hasLikedComment(
+      userId,
+      commentId,
+      authorType,
+      collegeId
+    );
   }
 
   async getLikeStatusForPosts(
     userId: string,
-    postIds: string[]
+    postIds: string[],
+    authorType?: AuthorType,
+    collegeId?: number
   ): Promise<Map<string, boolean>> {
-    return this.likeRepository.getLikeStatusForPosts(userId, postIds);
+    return this.likeRepository.getLikeStatusForPosts(
+      userId,
+      postIds,
+      authorType,
+      collegeId
+    );
   }
 
   async getLikeStatusForComments(
     userId: string,
-    commentIds: string[]
+    commentIds: string[],
+    authorType?: AuthorType,
+    collegeId?: number
   ): Promise<Map<string, boolean>> {
-    return this.likeRepository.getLikeStatusForComments(userId, commentIds);
+    return this.likeRepository.getLikeStatusForComments(
+      userId,
+      commentIds,
+      authorType,
+      collegeId
+    );
   }
 }

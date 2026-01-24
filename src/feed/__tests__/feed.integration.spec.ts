@@ -230,7 +230,13 @@ describe("FeedService Integration Tests", () => {
     it("should return blended feed for authenticated user", async () => {
       const testUserId = testUsers[0].id;
 
-      const result = await feedService.getFeed(testUserId, undefined, 20);
+      const result = await feedService.getFeed(
+        testUserId,
+        undefined,
+        20,
+        undefined,
+        undefined
+      );
 
       expect(result.posts).toBeDefined();
       expect(result.posts.length).toBeGreaterThan(0);
@@ -249,7 +255,13 @@ describe("FeedService Integration Tests", () => {
 
       const followingIds = follows.map((f) => f.followingId);
 
-      const result = await feedService.getFeed(testUserId, undefined, 50);
+      const result = await feedService.getFeed(
+        testUserId,
+        undefined,
+        50,
+        undefined,
+        undefined
+      );
 
       // Check if at least some posts are from followed users
       const fromFollowing = result.posts.filter(
@@ -273,7 +285,13 @@ describe("FeedService Integration Tests", () => {
       const followingIds = new Set(follows.map((f) => f.followingId));
       followingIds.add(testUserId);
 
-      const result = await feedService.getFeed(testUserId, undefined, 50);
+      const result = await feedService.getFeed(
+        testUserId,
+        undefined,
+        50,
+        undefined,
+        undefined
+      );
 
       // Posts NOT from following = discovery/trending
       const discoveryPosts = result.posts.filter(
@@ -296,7 +314,7 @@ describe("FeedService Integration Tests", () => {
 
       // Time the feed request
       const start = Date.now();
-      await feedService.getFeed(testUserId, undefined, 20);
+      await feedService.getFeed(testUserId, undefined, 20, undefined, undefined);
       const duration = Date.now() - start;
 
       console.log(`Feed request took ${duration}ms`);
@@ -308,7 +326,9 @@ describe("FeedService Integration Tests", () => {
 
       const start = Date.now();
       const results = await Promise.all(
-        userIds.map((userId) => feedService.getFeed(userId, undefined, 20))
+        userIds.map((userId) =>
+          feedService.getFeed(userId, undefined, 20, undefined, undefined)
+        )
       );
       const duration = Date.now() - start;
 

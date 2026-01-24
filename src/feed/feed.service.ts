@@ -1,12 +1,13 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, In } from "typeorm";
+import { Repository, In, Brackets } from "typeorm";
 import { Post, PostVisibility } from "../posts/post.entity";
 import { FeedCacheService } from "./feed-cache.service";
 import { TrendingService } from "./trending.service";
 import { LikesService } from "../likes/likes.service";
 import { FollowersService } from "../followers/followers.service";
 import { DiscoveryService } from "../followers/discovery.service";
+import { AuthorType } from "../common/enums";
 import { FeedPostDto, FeedResponseDto, FeedItemDto } from "./dto";
 
 // Feed blend ratios for logged-in users
@@ -47,7 +48,9 @@ export class FeedService {
   async getFeed(
     userId: string,
     cursor: string | undefined,
-    limit: number
+    limit: number,
+    authorType?: string,
+    collegeId?: number
   ): Promise<FeedResponseDto> {
     // 1. Get posts from followed users from pregenerated timeline
     const followingPosts = await this.getFollowingPosts(
@@ -79,7 +82,9 @@ export class FeedService {
     // 7. Get like status for user
     const likeStatuses = await this.likesService.getLikeStatusForPosts(
       userId,
-      postIds
+      postIds,
+      authorType as AuthorType,
+      collegeId
     );
 
     // 8. Get follow status for post authors
@@ -179,23 +184,61 @@ export class FeedService {
     cursor: string | undefined,
     limit: number
   ): Promise<ScoredPost[]> {
-    // Get following IDs (people the user follows)
-    const followingIds = await this.getFollowingIds(userId);
-    const allAuthorIds = [userId, ...followingIds];
-
-    if (allAuthorIds.length === 0) {
-      return [];
-    }
-
-    // Query database
+    // Optimized scalable query using JOINs instead of fetching all IDs
     const query = this.postRepository
       .createQueryBuilder("post")
       .leftJoinAndSelect("post.author", "author")
+      .leftJoinAndSelect("post.taggedCollege", "taggedCollege")
+      // Join with user follows to check if current user follows the author
+      .leftJoin(
+        "follow",
+        "f",
+        "f.followingId = post.authorId AND f.followerId = :userId",
+        { userId }
+      )
+      // Join with college follows to check if current user follows the college
+      .leftJoin(
+        "follow_college",
+        "fc",
+        "fc.collegeId = post.taggedCollegeId AND fc.followerId = :userId",
+        { userId }
+      )
+      // Join with members to check membership
+      .leftJoin(
+        "member",
+        "m",
+        "m.collegeId = post.taggedCollegeId AND m.userId = :userId",
+        { userId }
+      )
       .where("post.isDeleted = false")
-      .andWhere("post.authorId IN (:...authorIds)", { authorIds: allAuthorIds })
-      .andWhere("post.visibility IN (:...visibilities)", {
-        visibilities: [PostVisibility.PUBLIC, PostVisibility.CONNECTIONS],
-      });
+      .andWhere(
+        new Brackets((qb) => {
+          // 1. My own posts
+          qb.where("post.authorId = :userId", { userId })
+            // 2. Posts from users I follow (f.id is not null)
+            .orWhere("f.id IS NOT NULL")
+            // 3. Posts from colleges I follow (fc.id is not null)
+            .orWhere(
+              "fc.id IS NOT NULL AND post.authorType = :collegeType",
+              { collegeType: "college" }
+            );
+        })
+      )
+      .andWhere(
+        new Brackets((qb) => {
+          qb.where("post.visibility = :public", {
+            public: PostVisibility.PUBLIC,
+          })
+            .orWhere("post.visibility = :connections", {
+              connections: PostVisibility.CONNECTIONS,
+            })
+            .orWhere("post.visibility = :college AND m.id IS NOT NULL", {
+              college: PostVisibility.COLLEGE,
+            })
+            // Author can always see their own posts
+            .orWhere("post.authorId = :userId", { userId });
+        })
+      );
 
     if (cursor) {
       query.andWhere("post.createdAt < :cursor", {
@@ -416,6 +459,14 @@ export class FeedService {
         authorType: post.authorType,
         type: post.type,
         taggedCollegeId: post.taggedCollegeId,
+        taggedCollege: post.taggedCollege
+          ? {
+              college_id: post.taggedCollege.college_id,
+              college_name: post.taggedCollege.college_name,
+              logo_img: post.taggedCollege.logo_img,
+              slug: post.taggedCollege.slug,
+            }
+          : undefined,
         likeCount: post.likeCount,
         commentCount: post.commentCount,
         createdAt: post.createdAt,

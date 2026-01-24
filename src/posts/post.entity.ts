@@ -94,6 +94,7 @@ export class Post {
   @Column({ type: "boolean", default: false })
   isDeleted: boolean;
 
+  @Index()
   @CreateDateColumn({ type: "timestamptz" })
   createdAt: Date;
 

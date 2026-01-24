@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  ForbiddenException,
 } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from "@nestjs/swagger";
 import { FileInterceptor, File } from "@nest-lab/fastify-multer";
@@ -21,6 +22,14 @@ import { PostsService } from "./post.service";
 import { CreatePostDto, UpdatePostDto, FeedQueryDto } from "./post.dto";
 import { FollowersService } from "src/followers/followers.service";
 import { LikesService } from "src/likes/likes.service";
+import { CollegeMemberService } from "src/college-member/college-member.service";
+import { AuthorType } from "src/common/enums";
+
+// DTO for like action with optional author context
+class LikeActionDto {
+  authorType?: AuthorType;
+  collegeId?: number;
+}
 
 @ApiTags("Posts")
 @ApiBearerAuth()
@@ -30,7 +39,8 @@ export class PostsController {
   constructor(
     private readonly postsService: PostsService,
     private readonly followersService: FollowersService,
-    private readonly likesService: LikesService
+    private readonly likesService: LikesService,
+    private readonly collegeMemberService: CollegeMemberService
   ) {}
 
   @Post("media")
@@ -95,30 +105,13 @@ export class PostsController {
     return this.mapToResponse(post, false);
   }
 
-  @Get("feed")
-  @ApiOperation({ summary: "Get personalized feed" })
-  async getFeed(@User() user: { id: string }, @Query() query: FeedQueryDto) {
-    // Get IDs of users this user follows
-    const followingIds = await this.followersService.getFollowingIds(user.id);
-    const posts = await this.postsService.getFeed(
-      user.id,
-      followingIds,
-      query.page || 1,
-      Math.min(query.limit || 20, 50)
-    );
-    const postIds = posts.map((p) => p.id);
-    const likeStatuses = await this.likesService.getLikeStatusForPosts(
-      user.id,
-      postIds
-    );
-    return posts.map((post) =>
-      this.mapToResponse(post, likeStatuses.get(post.id) || false)
-    );
-  }
-
   @Get(":id")
   @ApiOperation({ summary: "Get a specific post" })
-  async getPost(@User() user: { id: string }, @Param("id") postId: string) {
+  async getPost(
+    @User() user: { id: string },
+    @Param("id") postId: string,
+    @Query() query: FeedQueryDto
+  ) {
     const post = await this.postsService.getPost(
       postId,
       user.id,
@@ -128,7 +121,12 @@ export class PostsController {
         return following.includes(b);
       }
     );
-    const hasLiked = await this.likesService.hasLikedPost(user.id, postId);
+    const hasLiked = await this.likesService.hasLikedPost(
+      user.id,
+      postId,
+      query.authorType,
+      query.collegeId
+    );
     return this.mapToResponse(post, hasLiked);
   }
 
@@ -150,6 +148,8 @@ export class PostsController {
       dto.type,
       dto.taggedCollegeId
     );
+    // Since this is an update by the author, checking like status as USER is the sensible default,
+    // or we could ask the frontend to pass context. For now default to USER is safe.
     const hasLiked = await this.likesService.hasLikedPost(user.id, postId);
     return this.mapToResponse(post, hasLiked);
   }
@@ -165,8 +165,30 @@ export class PostsController {
   @ApiOperation({ summary: "Like a post" })
   @UseGuards(ThrottlerGuard)
   @Throttle({ like: { limit: 30, ttl: 60000 } })
-  async likePost(@User() user: { id: string }, @Param("id") postId: string) {
-    await this.likesService.likePost(user.id, postId);
+  async likePost(
+    @User() user: { id: string },
+    @Param("id") postId: string,
+    @Body() dto: LikeActionDto
+  ) {
+    // Validate college admin status if acting as college
+    if (dto.authorType === AuthorType.COLLEGE && dto.collegeId) {
+      const isAdmin = await this.collegeMemberService.isCollegeAdmin(
+        user.id,
+        dto.collegeId
+      );
+      if (!isAdmin) {
+        throw new ForbiddenException(
+          "You are not authorized to act on behalf of this college"
+        );
+      }
+    }
+
+    await this.likesService.likePost(
+      user.id,
+      postId,
+      dto.authorType,
+      dto.collegeId
+    );
     return { success: true };
   }
 
@@ -174,8 +196,30 @@ export class PostsController {
   @ApiOperation({ summary: "Unlike a post" })
   @UseGuards(ThrottlerGuard)
   @Throttle({ like: { limit: 30, ttl: 60000 } })
-  async unlikePost(@User() user: { id: string }, @Param("id") postId: string) {
-    await this.likesService.unlikePost(user.id, postId);
+  async unlikePost(
+    @User() user: { id: string },
+    @Param("id") postId: string,
+    @Body() dto: LikeActionDto
+  ) {
+    // Validate college admin status if acting as college
+    if (dto.authorType === AuthorType.COLLEGE && dto.collegeId) {
+      const isAdmin = await this.collegeMemberService.isCollegeAdmin(
+        user.id,
+        dto.collegeId
+      );
+      if (!isAdmin) {
+        throw new ForbiddenException(
+          "You are not authorized to act on behalf of this college"
+        );
+      }
+    }
+
+    await this.likesService.unlikePost(
+      user.id,
+      postId,
+      dto.authorType,
+      dto.collegeId
+    );
     return { success: true };
   }
 
@@ -193,6 +237,7 @@ export class PostsController {
             college_id: post.taggedCollege.college_id,
             college_name: post.taggedCollege.college_name,
             logo_img: post.taggedCollege.logo_img,
+            slug: post.taggedCollege.slug,
           }
         : null,
       likeCount: post.likeCount,

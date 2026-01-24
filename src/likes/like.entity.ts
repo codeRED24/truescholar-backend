@@ -12,10 +12,13 @@ import {
 import { User } from "../authentication_module/better-auth/entities/users.entity";
 import { Post } from "../posts/post.entity";
 import { Comment } from "../comments/comment.entity";
+import { AuthorType } from "../common/enums";
+import { CollegeInfo } from "../college/college-info/college-info.entity";
 
 @Entity({ name: "like" })
-@Unique(["userId", "postId"])
-@Unique(["userId", "commentId"])
+// Unique constraints handled by database index for Option B support:
+// UNIQUE(userId, postId, COALESCE(collegeId, -1))
+// UNIQUE(userId, commentId, COALESCE(collegeId, -1))
 @Check(
   `("postId" IS NOT NULL AND "commentId" IS NULL) OR ("postId" IS NULL AND "commentId" IS NOT NULL)`
 )
@@ -46,6 +49,21 @@ export class Like {
   @ManyToOne(() => Comment, { onDelete: "CASCADE", nullable: true })
   @JoinColumn({ name: "commentId" })
   comment: Comment | null;
+
+  @Column({
+    type: "enum",
+    enum: AuthorType,
+    default: AuthorType.USER,
+  })
+  authorType: AuthorType;
+
+  @Index()
+  @Column({ type: "int", nullable: true })
+  collegeId: number | null;
+
+  @ManyToOne(() => CollegeInfo, { onDelete: "CASCADE", nullable: true })
+  @JoinColumn({ name: "collegeId" })
+  college: CollegeInfo | null;
 
   @CreateDateColumn({ type: "timestamptz" })
   createdAt: Date;

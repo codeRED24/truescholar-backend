@@ -11,6 +11,7 @@ import { Comment } from "./comment.entity";
 import { CommentRepository } from "./comment.repository";
 import { PostsService } from "../posts/post.service";
 import { randomUUID } from "crypto";
+import { AuthorType } from "../common/enums";
 
 @Injectable()
 export class CommentsService implements OnModuleInit {
@@ -28,7 +29,9 @@ export class CommentsService implements OnModuleInit {
     postId: string,
     authorId: string,
     content: string,
-    parentId?: string
+    parentId?: string,
+    authorType?: AuthorType,
+    collegeId?: number
   ): Promise<Comment> {
     const post = await this.postsService.findById(postId);
     if (!post) throw new NotFoundException("Post not found");
@@ -44,6 +47,8 @@ export class CommentsService implements OnModuleInit {
       authorId,
       content,
       parentId,
+      authorType,
+      collegeId,
     });
     const newCommentCount =
       await this.postsService.incrementCommentCount(postId);
@@ -57,6 +62,8 @@ export class CommentsService implements OnModuleInit {
         commentId: comment.id,
         postId,
         authorId,
+        authorType: authorType || AuthorType.USER,
+        collegeId: collegeId || null,
         postAuthorId: post.authorId,
         parentId: parentId || null,
         postCommentCount: newCommentCount,

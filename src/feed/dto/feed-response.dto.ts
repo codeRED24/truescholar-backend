@@ -14,6 +14,20 @@ export class FeedAuthorDto {
   user_type?: string;
 }
 
+export class FeedCollegeDto {
+  @ApiProperty()
+  college_id: number;
+
+  @ApiProperty()
+  college_name: string;
+
+  @ApiPropertyOptional()
+  logo_img?: string;
+
+  @ApiPropertyOptional()
+  slug?: string;
+}
+
 export class FeedPostDto {
   @ApiProperty()
   id: string;
@@ -39,6 +53,9 @@ export class FeedPostDto {
 
   @ApiPropertyOptional()
   taggedCollegeId?: number;
+
+  @ApiPropertyOptional({ type: FeedCollegeDto })
+  taggedCollege?: FeedCollegeDto;
 
   @ApiProperty()
   likeCount: number;

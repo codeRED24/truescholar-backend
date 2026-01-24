@@ -2,7 +2,6 @@ import {
   AbilityBuilder,
   createMongoAbility,
   MongoAbility,
-  InferSubjects,
 } from "@casl/ability";
 import { Injectable } from "@nestjs/common";
 import { UserRole, CollegeRole } from "../common/enums";
@@ -40,7 +39,7 @@ export class CaslAbilityFactory {
    */
   createForUser(user: UserContext, membership?: MemberContext): AppAbility {
     const { can, cannot, build } = new AbilityBuilder<AppAbility>(
-      createMongoAbility
+      createMongoAbility,
     );
 
     // Platform admin has full access to everything

@@ -2,7 +2,8 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { FeedService } from "../feed.service";
 import { FeedCacheService } from "../feed-cache.service";
 import { TrendingService } from "../trending.service";
-import { ConnectionsService } from "../../connections/connections.service";
+import { DiscoveryService } from "../../followers/discovery.service";
+import { FollowersService } from "../../followers/followers.service";
 import { LikesService } from "../../likes/likes.service";
 import { Repository } from "typeorm";
 import { Post, PostVisibility } from "../../posts/post.entity";
@@ -17,7 +18,7 @@ describe("FeedService Unit Tests", () => {
   let feedService: FeedService;
   let mockFeedCache: jest.Mocked<FeedCacheService>;
   let mockTrending: jest.Mocked<TrendingService>;
-  let mockConnections: jest.Mocked<ConnectionsService>;
+  let mockFollowers: jest.Mocked<FollowersService>;
   let mockLikes: jest.Mocked<LikesService>;
   let mockPostRepo: jest.Mocked<Repository<Post>>;
 
@@ -58,8 +59,8 @@ describe("FeedService Unit Tests", () => {
       calculateTrendingScore: jest.fn(),
     } as any;
 
-    mockConnections = {
-      getConnectionUserIds: jest.fn(),
+    mockFollowers = {
+      getFollowingIds: jest.fn(),
     } as any;
 
     mockLikes = {
@@ -70,6 +71,7 @@ describe("FeedService Unit Tests", () => {
       find: jest.fn(),
       createQueryBuilder: jest.fn(() => ({
         leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
@@ -83,9 +85,10 @@ describe("FeedService Unit Tests", () => {
         FeedService,
         { provide: FeedCacheService, useValue: mockFeedCache },
         { provide: TrendingService, useValue: mockTrending },
-        { provide: ConnectionsService, useValue: mockConnections },
+        { provide: FollowersService, useValue: mockFollowers },
         { provide: LikesService, useValue: mockLikes },
         { provide: getRepositoryToken(Post), useValue: mockPostRepo },
+        { provide: DiscoveryService, useValue: { getSuggestions: jest.fn().mockResolvedValue([]) } },
       ],
     }).compile();
 
@@ -116,7 +119,7 @@ describe("FeedService Unit Tests", () => {
       const result = await feedService.getGuestFeed(undefined, 20);
 
       expect(mockTrending.getGuestFeed).toHaveBeenCalledWith(undefined, 21);
-      expect(result.posts).toBeDefined();
+      expect(result.items).toBeDefined();
     });
 
     it("should support cursor pagination", async () => {
@@ -169,11 +172,17 @@ describe("FeedService Unit Tests", () => {
 
       mockPostRepo.find.mockResolvedValue([]);
 
-      const result = await feedService.getFeed(testUserId, undefined, 20);
+      const result = await feedService.getFeed(
+        testUserId,
+        undefined,
+        20,
+        undefined,
+        undefined
+      );
 
       expect(mockFeedCache.getTimeline).toHaveBeenCalled();
       expect(mockTrending.getTrendingPosts).toHaveBeenCalled();
-      expect(result.posts).toBeDefined();
+      expect(result.items).toBeDefined();
     });
 
     it("should rebuild timeline on cache miss", async () => {
@@ -190,17 +199,21 @@ describe("FeedService Unit Tests", () => {
       });
 
       // Connection service fallback when cache misses
-      mockConnections.getConnectionUserIds.mockResolvedValue(testConnectionIds);
+      mockFollowers.getFollowingIds.mockResolvedValue(testConnectionIds);
 
       // Post hydration from DB rebuild
       mockFeedCache.getCachedPosts.mockResolvedValue(new Map());
       mockPostRepo.find.mockResolvedValue(testPosts);
 
-      const result = await feedService.getFeed(testUserId, undefined, 20);
-
-      expect(mockConnections.getConnectionUserIds).toHaveBeenCalledWith(
-        testUserId
+      const result = await feedService.getFeed(
+        testUserId,
+        undefined,
+        20,
+        undefined,
+        undefined
       );
+
+      expect(mockFollowers.getFollowingIds).toHaveBeenCalledWith(testUserId);
     });
 
     it("should merge celebrity posts at read time", async () => {
@@ -235,10 +248,40 @@ describe("FeedService Unit Tests", () => {
 
       mockPostRepo.find.mockResolvedValue([]);
 
-      const result = await feedService.getFeed(testUserId, undefined, 20);
+      const result = await feedService.getFeed(
+        testUserId,
+        undefined,
+        20,
+        undefined,
+        undefined
+      );
 
       expect(mockFeedCache.filterCelebrities).toHaveBeenCalled();
       expect(mockFeedCache.getCelebrityPosts).toHaveBeenCalled();
+    });
+
+    it("should pass identity params to likes service", async () => {
+      mockFeedCache.getTimeline.mockResolvedValue({
+        postIds: ["post-1"],
+        scores: [Date.now()],
+      });
+      mockTrending.getTrendingPosts.mockResolvedValue({
+        postIds: [],
+        scores: [],
+      });
+      mockFeedCache.getCachedPosts.mockResolvedValue(
+        new Map([["post-1", testPosts[0]]])
+      );
+      mockPostRepo.find.mockResolvedValue([]);
+
+      await feedService.getFeed(testUserId, undefined, 20, "college", 123);
+
+      expect(mockLikes.getLikeStatusForPosts).toHaveBeenCalledWith(
+        testUserId,
+        expect.any(Array),
+        "college",
+        123
+      );
     });
   });
 
@@ -246,7 +289,7 @@ describe("FeedService Unit Tests", () => {
     it("should pre-populate timeline", async () => {
       mockFeedCache.getConnectionIds.mockResolvedValue(testConnectionIds);
       mockFeedCache.getTimeline.mockResolvedValue(null);
-      mockConnections.getConnectionUserIds.mockResolvedValue(testConnectionIds);
+      mockFollowers.getFollowingIds.mockResolvedValue(testConnectionIds);
 
       await feedService.warmCache(testUserId);
 

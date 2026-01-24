@@ -32,7 +32,13 @@ export class FeedController {
     @User() user: { id: string },
     @Query() query: FeedQueryDto
   ): Promise<FeedResponseDto> {
-    return this.feedService.getFeed(user.id, query.cursor, query.limit || 20);
+    return this.feedService.getFeed(
+      user.id,
+      query.cursor,
+      query.limit || 20,
+      query.authorType,
+      query.collegeId
+    );
   }
 
   /**

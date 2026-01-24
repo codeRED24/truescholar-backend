@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { CollegeMemberController } from "./college-member.controller";
+import { UserMembershipController } from "./user-membership.controller";
 import { CollegeMemberService } from "./college-member.service";
 import { Member } from "../authentication_module/better-auth/entities/member.entity";
 import { CollegeInfo } from "../college/college-info/college-info.entity";
@@ -9,7 +10,7 @@ import { CaslModule } from "../casl";
 
 @Module({
   imports: [TypeOrmModule.forFeature([Member, CollegeInfo, User]), CaslModule],
-  controllers: [CollegeMemberController],
+  controllers: [CollegeMemberController, UserMembershipController],
   providers: [CollegeMemberService],
   exports: [CollegeMemberService],
 })

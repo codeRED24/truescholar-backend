@@ -10,6 +10,8 @@ import {
 } from "typeorm";
 import { User } from "../authentication_module/better-auth/entities/users.entity";
 import { Post } from "../posts/post.entity";
+import { AuthorType } from "../common/enums";
+import { CollegeInfo } from "../college/college-info/college-info.entity";
 
 @Entity({ name: "comment" })
 export class Comment {
@@ -31,6 +33,21 @@ export class Comment {
   @ManyToOne(() => User, { onDelete: "CASCADE" })
   @JoinColumn({ name: "authorId" })
   author: User;
+
+  @Column({
+    type: "enum",
+    enum: AuthorType,
+    default: AuthorType.USER,
+  })
+  authorType: AuthorType;
+
+  @Index()
+  @Column({ type: "int", nullable: true })
+  collegeId: number | null;
+
+  @ManyToOne(() => CollegeInfo, { onDelete: "SET NULL", nullable: true })
+  @JoinColumn({ name: "collegeId" })
+  college: CollegeInfo | null;
 
   @Column({ type: "uuid", nullable: true })
   parentId: string | null;

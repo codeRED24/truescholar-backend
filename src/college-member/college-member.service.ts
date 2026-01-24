@@ -139,4 +139,14 @@ export class CollegeMemberService {
       order: { createdAt: "DESC" },
     });
   }
+
+  /**
+   * Check if a user is a college admin for a specific college
+   */
+  async isCollegeAdmin(userId: string, collegeId: number): Promise<boolean> {
+    const membership = await this.memberRepository.findOne({
+      where: { userId, collegeId, role: CollegeRole.COLLEGE_ADMIN },
+    });
+    return !!membership;
+  }
 }
