@@ -14,6 +14,7 @@ import { FollowRepository } from "./follow.repository";
 import { FollowCollegeRepository } from "./follow-college.repository";
 import { FollowCacheService } from "./follow-cache.service";
 import { randomUUID } from "crypto";
+import { AuthorType } from "../common/enums";
 import {
   FollowEntry,
   FollowStats,
@@ -34,23 +35,39 @@ export class FollowersService implements OnModuleInit {
     await this.kafkaClient.connect();
   }
 
-  async follow(followerId: string, followingId: string): Promise<Follow> {
-    if (followerId === followingId) {
+  async follow(
+    followerId: string,
+    followingId: string,
+    authorType?: AuthorType,
+    followerCollegeId?: number
+  ): Promise<Follow> {
+    if (followerId === followingId && authorType !== AuthorType.COLLEGE) {
       throw new BadRequestException("Cannot follow yourself");
     }
 
     const existing = await this.followRepository.findFollow(
       followerId,
-      followingId
+      followingId,
+      authorType,
+      followerCollegeId
     );
     if (existing) {
       throw new ConflictException("Already following this user");
     }
 
-    const follow = await this.followRepository.create(followerId, followingId);
+    const follow = await this.followRepository.create(
+      followerId,
+      followingId,
+      authorType,
+      followerCollegeId
+    );
 
     // Write-through cache update
-    await this.followCacheService.addFollow(followerId, followingId);
+    // Note: Cache service might need update to handle college follows if we want to cache them
+    // For now, only caching user-user follows to avoid complexity
+    if (!authorType || authorType === AuthorType.USER) {
+      await this.followCacheService.addFollow(followerId, followingId);
+    }
 
     this.kafkaClient.emit("social-graph.user.followed", {
       eventId: randomUUID(),
@@ -60,7 +77,9 @@ export class FollowersService implements OnModuleInit {
       payload: {
         followerId,
         followingId,
-        followerFollowingCount: 0, // Will be set correctly in Phase 3
+        authorType,
+        followerCollegeId,
+        followerFollowingCount: 0,
         followingFollowerCount: 0,
       },
     });
@@ -68,18 +87,30 @@ export class FollowersService implements OnModuleInit {
     return follow;
   }
 
-  async unfollow(followerId: string, followingId: string): Promise<void> {
-    if (followerId === followingId) {
+  async unfollow(
+    followerId: string,
+    followingId: string,
+    authorType?: AuthorType,
+    followerCollegeId?: number
+  ): Promise<void> {
+    if (followerId === followingId && authorType !== AuthorType.COLLEGE) {
       throw new BadRequestException("Cannot unfollow yourself");
     }
 
-    const deleted = await this.followRepository.delete(followerId, followingId);
+    const deleted = await this.followRepository.delete(
+      followerId,
+      followingId,
+      authorType,
+      followerCollegeId
+    );
     if (!deleted) {
       throw new NotFoundException("Not following this user");
     }
 
     // Write-through cache update
-    await this.followCacheService.removeFollow(followerId, followingId);
+    if (!authorType || authorType === AuthorType.USER) {
+      await this.followCacheService.removeFollow(followerId, followingId);
+    }
 
     this.kafkaClient.emit("social-graph.user.unfollowed", {
       eventId: randomUUID(),
@@ -89,6 +120,8 @@ export class FollowersService implements OnModuleInit {
       payload: {
         followerId,
         followingId,
+        authorType,
+        followerCollegeId,
         followerFollowingCount: 0,
         followingFollowerCount: 0,
       },
@@ -97,11 +130,15 @@ export class FollowersService implements OnModuleInit {
 
   async followCollege(
     followerId: string,
-    collegeId: number
+    collegeId: number,
+    authorType?: AuthorType,
+    followerCollegeId?: number
   ): Promise<FollowCollege> {
     const existing = await this.followCollegeRepository.findFollow(
       followerId,
-      collegeId
+      collegeId,
+      authorType,
+      followerCollegeId
     );
     if (existing) {
       throw new ConflictException("Already following this college");
@@ -109,7 +146,9 @@ export class FollowersService implements OnModuleInit {
 
     const follow = await this.followCollegeRepository.create(
       followerId,
-      collegeId
+      collegeId,
+      authorType,
+      followerCollegeId
     );
 
     this.kafkaClient.emit("social-graph.college.followed", {
@@ -120,16 +159,25 @@ export class FollowersService implements OnModuleInit {
       payload: {
         userId: followerId,
         collegeId,
+        authorType,
+        followerCollegeId,
       },
     });
 
     return follow;
   }
 
-  async unfollowCollege(followerId: string, collegeId: number): Promise<void> {
+  async unfollowCollege(
+    followerId: string,
+    collegeId: number,
+    authorType?: AuthorType,
+    followerCollegeId?: number
+  ): Promise<void> {
     const deleted = await this.followCollegeRepository.delete(
       followerId,
-      collegeId
+      collegeId,
+      authorType,
+      followerCollegeId
     );
     if (!deleted) {
       throw new NotFoundException("Not following this college");
@@ -143,6 +191,8 @@ export class FollowersService implements OnModuleInit {
       payload: {
         userId: followerId,
         collegeId,
+        authorType,
+        followerCollegeId,
       },
     });
   }

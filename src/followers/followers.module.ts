@@ -9,9 +9,13 @@ import { FollowCacheService } from "./follow-cache.service";
 import { DiscoveryService } from "./discovery.service";
 import { FollowersController } from "./followers.controller";
 import { DiscoveryController } from "./discovery.controller";
+import { CollegeMemberModule } from "../college-member/college-member.module";
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Follow, FollowCollege])],
+  imports: [
+    TypeOrmModule.forFeature([Follow, FollowCollege]),
+    CollegeMemberModule,
+  ],
   controllers: [FollowersController, DiscoveryController],
   providers: [
     FollowRepository,

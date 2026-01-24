@@ -1,17 +1,38 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsString, IsOptional, IsInt, Min, Max } from "class-validator";
+import { IsString, IsOptional, IsInt, Min, Max, IsEnum } from "class-validator";
 import { Type } from "class-transformer";
+import { AuthorType } from "../common/enums";
 
 export class FollowUserDto {
   @ApiProperty({ description: "ID of the user to follow" })
   @IsString()
   userId: string;
+
+  @ApiPropertyOptional({ enum: AuthorType })
+  @IsOptional()
+  @IsEnum(AuthorType)
+  authorType?: AuthorType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  followerCollegeId?: number;
 }
 
 export class FollowCollegeDto {
   @ApiProperty({ description: "ID of the college to follow" })
   @IsInt()
   collegeId: number;
+
+  @ApiPropertyOptional({ enum: AuthorType })
+  @IsOptional()
+  @IsEnum(AuthorType)
+  authorType?: AuthorType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  followerCollegeId?: number;
 }
 
 export class FollowersQueryDto {

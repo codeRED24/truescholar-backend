@@ -107,7 +107,7 @@ export const auth = betterAuth({
           resetUrl: resetUrl,
           expiryHours: 1,
         },
-        user.email
+        user.email,
       );
 
       console.log(`*** Password reset email sent to ${user.email}`);
@@ -138,7 +138,7 @@ export const auth = betterAuth({
     cookieCache: {
       enabled: true,
       maxAge: 5 * 60,
-      strategy: "jwt",
+      strategy: "compact",
     },
   },
   plugins: [
@@ -156,7 +156,7 @@ export const auth = betterAuth({
             otp: otp,
             email: email,
           },
-          email
+          email,
         );
         console.log(`*** Email OTP ${otp} sent to ${email} (type: ${type})`);
       },

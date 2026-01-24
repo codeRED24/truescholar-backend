@@ -11,9 +11,20 @@ import { UserDevicesController } from "./user-devices.controller";
 import { NotificationEventController } from "./notification-event.controller";
 import { EmailEventController } from "./email-event.controller";
 import { PushNotificationConsumer } from "./push-notification.consumer";
+import { User } from "../authentication_module/better-auth/entities/users.entity";
+import { CollegeInfo } from "../college/college-info/college-info.entity";
+import { Member } from "../authentication_module/better-auth/entities/member.entity";
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Notification, UserDevice])],
+  imports: [
+    TypeOrmModule.forFeature([
+      Notification,
+      UserDevice,
+      User,
+      CollegeInfo,
+      Member,
+    ]),
+  ],
   controllers: [
     NotificationsController,
     UserDevicesController,

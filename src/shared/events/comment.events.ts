@@ -6,6 +6,7 @@
  */
 
 import { DomainEvent } from "./domain-event.interface";
+import { AuthorType } from "../../common/enums";
 
 // =============================================================================
 // Event Topics (Kafka topic names)
@@ -28,6 +29,8 @@ export interface CommentCreatedPayload {
   parentId: string | null;
   /** New comment count on the post */
   postCommentCount: number;
+  authorType: AuthorType;
+  collegeId: number | null;
 }
 
 export interface CommentDeletedPayload {

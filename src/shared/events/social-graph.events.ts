@@ -6,6 +6,7 @@
  */
 
 import { DomainEvent } from "./domain-event.interface";
+import { AuthorType } from "../../common/enums";
 
 // =============================================================================
 // Event Topics (Kafka topic names)
@@ -29,6 +30,8 @@ export interface UserFollowedPayload {
   followerFollowingCount: number;
   /** Followed user's new follower count */
   followingFollowerCount: number;
+  authorType?: AuthorType;
+  followerCollegeId?: number;
 }
 
 export interface UserUnfollowedPayload {
@@ -36,16 +39,22 @@ export interface UserUnfollowedPayload {
   followingId: string;
   followerFollowingCount: number;
   followingFollowerCount: number;
+  authorType?: AuthorType;
+  followerCollegeId?: number;
 }
 
 export interface CollegeFollowedPayload {
   userId: string;
   collegeId: number;
+  authorType?: AuthorType;
+  followerCollegeId?: number;
 }
 
 export interface CollegeUnfollowedPayload {
   userId: string;
   collegeId: number;
+  authorType?: AuthorType;
+  followerCollegeId?: number;
 }
 
 // =============================================================================

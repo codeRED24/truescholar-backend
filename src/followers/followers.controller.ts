@@ -7,6 +7,7 @@ import {
   Param,
   Query,
   UseGuards,
+  ForbiddenException,
 } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { AuthGuard } from "../authentication_module/better-auth/guards/auth.guard";
@@ -17,18 +18,37 @@ import {
   FollowersQueryDto,
   FollowCollegeDto,
 } from "./follow.dto";
+import { AuthorType } from "../common/enums";
+import { CollegeMemberService } from "../college-member/college-member.service";
+
+class UnfollowActionDto {
+  authorType?: AuthorType;
+  followerCollegeId?: number;
+}
 
 @ApiTags("Followers")
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
 @Controller("followers")
 export class FollowersController {
-  constructor(private readonly followersService: FollowersService) {}
+  constructor(
+    private readonly followersService: FollowersService,
+    private readonly collegeMemberService: CollegeMemberService
+  ) {}
 
   @Post("follow")
   @ApiOperation({ summary: "Follow a user" })
   async follow(@User() user: { id: string }, @Body() dto: FollowUserDto) {
-    const follow = await this.followersService.follow(user.id, dto.userId);
+    if (dto.authorType === AuthorType.COLLEGE && dto.followerCollegeId) {
+      await this.validateCollegeAdmin(user.id, dto.followerCollegeId);
+    }
+
+    const follow = await this.followersService.follow(
+      user.id,
+      dto.userId,
+      dto.authorType,
+      dto.followerCollegeId
+    );
     return {
       id: follow.id,
       followingId: follow.followingId,
@@ -40,9 +60,19 @@ export class FollowersController {
   @ApiOperation({ summary: "Unfollow a user" })
   async unfollow(
     @User() user: { id: string },
-    @Param("userId") userId: string
+    @Param("userId") userId: string,
+    @Body() dto: UnfollowActionDto
   ) {
-    await this.followersService.unfollow(user.id, userId);
+    if (dto.authorType === AuthorType.COLLEGE && dto.followerCollegeId) {
+      await this.validateCollegeAdmin(user.id, dto.followerCollegeId);
+    }
+
+    await this.followersService.unfollow(
+      user.id,
+      userId,
+      dto.authorType,
+      dto.followerCollegeId
+    );
     return { success: true };
   }
 
@@ -52,9 +82,15 @@ export class FollowersController {
     @User() user: { id: string },
     @Body() dto: FollowCollegeDto
   ) {
+    if (dto.authorType === AuthorType.COLLEGE && dto.followerCollegeId) {
+      await this.validateCollegeAdmin(user.id, dto.followerCollegeId);
+    }
+
     const follow = await this.followersService.followCollege(
       user.id,
-      dto.collegeId
+      dto.collegeId,
+      dto.authorType,
+      dto.followerCollegeId
     );
     return {
       id: follow.id,
@@ -67,10 +103,32 @@ export class FollowersController {
   @ApiOperation({ summary: "Unfollow a college" })
   async unfollowCollege(
     @User() user: { id: string },
-    @Param("collegeId") collegeId: number
+    @Param("collegeId") collegeId: number,
+    @Body() dto: UnfollowActionDto
   ) {
-    await this.followersService.unfollowCollege(user.id, collegeId);
+    if (dto.authorType === AuthorType.COLLEGE && dto.followerCollegeId) {
+      await this.validateCollegeAdmin(user.id, dto.followerCollegeId);
+    }
+
+    await this.followersService.unfollowCollege(
+      user.id,
+      collegeId,
+      dto.authorType,
+      dto.followerCollegeId
+    );
     return { success: true };
+  }
+
+  private async validateCollegeAdmin(userId: string, collegeId: number) {
+    const isAdmin = await this.collegeMemberService.isCollegeAdmin(
+      userId,
+      collegeId
+    );
+    if (!isAdmin) {
+      throw new ForbiddenException(
+        "You are not authorized to act on behalf of this college"
+      );
+    }
   }
 
   @Get()

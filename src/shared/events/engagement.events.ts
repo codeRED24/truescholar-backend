@@ -6,6 +6,7 @@
  */
 
 import { DomainEvent } from "./domain-event.interface";
+import { AuthorType } from "../../common/enums";
 
 // =============================================================================
 // Event Topics (Kafka topic names)
@@ -30,6 +31,8 @@ export interface PostLikedPayload {
   authorId: string;
   /** New total like count */
   likeCount: number;
+  authorType: AuthorType;
+  collegeId: number | null;
 }
 
 export interface PostUnlikedPayload {
@@ -37,6 +40,8 @@ export interface PostUnlikedPayload {
   userId: string;
   /** New total like count */
   likeCount: number;
+  authorType: AuthorType;
+  collegeId: number | null;
 }
 
 export interface CommentLikedPayload {
@@ -45,6 +50,8 @@ export interface CommentLikedPayload {
   likerId: string;
   commentAuthorId: string;
   likeCount: number;
+  authorType: AuthorType;
+  collegeId: number | null;
 }
 
 export interface CommentUnlikedPayload {
@@ -52,6 +59,8 @@ export interface CommentUnlikedPayload {
   postId: string;
   userId: string;
   likeCount: number;
+  authorType: AuthorType;
+  collegeId: number | null;
 }
 
 export interface PostBookmarkedPayload {
